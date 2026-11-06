@@ -29,6 +29,7 @@ type Suspect = {
   role: string
   motive: string
   shortLabel: string
+  image: string
 }
 
 type Comment = {
@@ -51,6 +52,7 @@ const suspects: Suspect[] = [
     role: "Qamar-un-Nissa's son",
     motive: 'Baala is getting close to his mother, and he does not like it.',
     shortLabel: 'Qadir',
+    image: '/images/qadir-bg.jpg',
   },
   {
     id: 'billo',
@@ -59,6 +61,7 @@ const suspects: Suspect[] = [
     role: 'Heir to the feud',
     motive: 'Years of bad blood between the two families.',
     shortLabel: "Billo's son",
+    image: '/images/billo-bg.jpg',
   },
   {
     id: 'phajja',
@@ -67,6 +70,7 @@ const suspects: Suspect[] = [
     role: 'A son with a score',
     motive: 'Baala killed his father.',
     shortLabel: "Phajja's son",
+    image: '/images/phajja-bg.jpg',
   },
   {
     id: 'insider',
@@ -75,6 +79,7 @@ const suspects: Suspect[] = [
     role: 'Servant, munshi or guard',
     motive: 'Someone trusted, close enough to know every plan.',
     shortLabel: 'The insider',
+    image: '/images/insider-bg.jpg',
   },
   {
     id: 'alive',
@@ -83,6 +88,7 @@ const suspects: Suspect[] = [
     role: 'Plot-twist camp',
     motive: '"Hero bhi kabhi marta hai?" The writer keeps hinting at more.',
     shortLabel: 'Baala lives',
+    image: '/images/baala-bg.jpg',
   },
 ]
 
@@ -536,27 +542,31 @@ function App() {
       </header>
 
       <main>
-        <section className="hero-section container">
-          <div className="pill-row">
-            <span className="pill pill-soft">Spoiler zone: based on the viral promo clip</span>
-            <span className="pill pill-accent">Votes lock before the reveal episode</span>
-          </div>
+        <div className="hero-banner">
+          <img className="hero-banner-image" src="/images/hero-gunman.jpg" alt="" />
+          <div className="hero-banner-shade" aria-hidden="true" />
+          <section className="hero-section container">
+            <div className="pill-row">
+              <span className="pill pill-soft">Spoiler zone: based on the viral promo clip</span>
+              <span className="pill pill-accent">Votes lock before the reveal episode</span>
+            </div>
 
-          <h1>
-            Who pulled
-            <br />
-            the trigger?
-          </h1>
+            <h1>
+              Who pulled
+              <br />
+              the trigger?
+            </h1>
 
-          <p className="urdu-line" dir="rtl" lang="pa">
-            بالے نوں گولی کِنّے ماری؟
-          </p>
+            <p className="urdu-line" dir="rtl" lang="pa">
+              بالے نوں گولی کِنّے ماری؟
+            </p>
 
-          <p className="lede">
-            The promo shows a young gunman taking aim at Iqbal “Baala” Channan. Pick your suspect,
-            defend your theory, and see if you called it when the truth airs.
-          </p>
-        </section>
+            <p className="lede">
+              The promo shows a young gunman taking aim at Iqbal “Baala” Channan. Pick your suspect,
+              defend your theory, and see if you called it when the truth airs.
+            </p>
+          </section>
+        </div>
 
         <section id="vote" className="suspects-section container">
           <div className="section-header">
@@ -601,54 +611,59 @@ function App() {
                   key={suspect.id}
                   className={`suspect-card ${isSelected ? 'selected' : ''}`}
                 >
-                  <div className="card-head">
-                    <span className="mono-badge">{suspect.mono}</span>
-                    <span className="card-index">#{index + 1}</span>
-                  </div>
-
-                  <div className="card-main-copy">
-                    <h3>{suspect.name}</h3>
-                    <p className="role">{suspect.role}</p>
-                  </div>
-
-                  <p className="motive">
-                    <strong>Motive:</strong> {suspect.motive}
-                  </p>
-
-                  {myVote !== null && (
-                    <div className="vote-meter">
-                      <div className="meter-head">
-                        <span>{pct}%</span>
-                        <span>{count} votes</span>
-                      </div>
-                      <div className="meter-track">
-                        <span style={{ width: `${pct}%` }} />
-                      </div>
+                  <img className="suspect-card-image" src={suspect.image} alt="" />
+                  <div className="suspect-card-shade" aria-hidden="true" />
+                  <div className="suspect-card-content">
+                    <div className="card-head">
+                      <span className="card-index">#{index + 1}</span>
                     </div>
-                  )}
 
-                  <button
-                    type="button"
-                    className="vote-button"
-                    onClick={() => void handleVote(suspect.id)}
-                    disabled={
-                      isSubmittingVote ||
-                      Boolean(pollStatus?.is_locked) ||
-                      (isSupabaseConfigured && (!turnstileSiteKey || !turnstileToken))
-                    }
-                  >
-                    {pollStatus?.is_locked
-                      ? 'Poll locked'
-                      : isSelected
-                      ? 'Your pick'
-                      : myVote
-                        ? isSubmittingVote
-                          ? 'Saving...'
-                          : 'Switch vote'
-                        : isSubmittingVote
-                          ? 'Saving...'
-                          : 'Vote'}
-                  </button>
+                    <div className="card-spacer" />
+
+                    <div className="card-main-copy">
+                      <h3>{suspect.name}</h3>
+                      <p className="role">{suspect.role}</p>
+                    </div>
+
+                    <p className="motive">
+                      <strong>Motive:</strong> {suspect.motive}
+                    </p>
+
+                    {myVote !== null && (
+                      <div className="vote-meter">
+                        <div className="meter-head">
+                          <span>{pct}%</span>
+                          <span>{count} votes</span>
+                        </div>
+                        <div className="meter-track">
+                          <span style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      className="vote-button"
+                      onClick={() => void handleVote(suspect.id)}
+                      disabled={
+                        isSubmittingVote ||
+                        Boolean(pollStatus?.is_locked) ||
+                        (isSupabaseConfigured && (!turnstileSiteKey || !turnstileToken))
+                      }
+                    >
+                      {pollStatus?.is_locked
+                        ? 'Poll locked'
+                        : isSelected
+                        ? 'Your pick'
+                        : myVote
+                          ? isSubmittingVote
+                            ? 'Saving...'
+                            : 'Switch vote'
+                          : isSubmittingVote
+                            ? 'Saving...'
+                            : 'Vote'}
+                    </button>
+                  </div>
                 </article>
               )
             })}
@@ -962,7 +977,7 @@ function App() {
 
       <footer className="site-footer">
         <div className="container footer-inner">
-          <span>A fan-made poll about the drama Mitti De Baway. Not affiliated with Green Entertainment or the show’s makers.</span>
+          <span>A fan-made poll about the drama Mitti De Baway. Not affiliated with Green Entertainment or the show’s makers. Stills © their respective owners.</span>
           <span>[YOUR DOMAIN]</span>
         </div>
       </footer>

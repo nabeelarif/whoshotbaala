@@ -32,7 +32,10 @@ textarea,select,button,input{font-family:Inter,system-ui,sans-serif}
 </div>
 </header>
 
-<section style="max-width: 1160px; margin: 0 auto; padding: 72px 24px 40px; display: flex; flex-direction: column; gap: 20px">
+<div style="position: relative; overflow: hidden; border-bottom: 1px solid #3A2D22">
+<img src="/_blob/42d67120257148bef2980ede6b27cf95" alt="" style="position: absolute; top: 0; right: 0; height: 100%; width: 60%; max-width: 760px; object-fit: cover; object-position: 40% 20%">
+<div aria-hidden="true" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, #17110D 0%, rgba(23,17,13,0.92) 40%, rgba(23,17,13,0.45) 70%, rgba(23,17,13,0.25) 100%)"></div>
+<section style="position: relative; max-width: 1160px; margin: 0 auto; padding: 72px 24px 56px; display: flex; flex-direction: column; gap: 20px">
 <div style="display: flex; flex-wrap: wrap; gap: 10px">
 <span style="font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: #3A1E17; color: #F4B4A6; border: 1px solid #6B2F23">Spoiler zone: based on the viral promo clip</span>
 <span style="font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: #2A2014; color: #E8A930; border: 1px solid #5A4420">Votes lock before the reveal episode</span>
@@ -41,6 +44,7 @@ textarea,select,button,input{font-family:Inter,system-ui,sans-serif}
 <p dir="rtl" lang="pa" style="margin: 0; font-family: 'Noto Nastaliq Urdu', serif; font-size: 30px; line-height: 2; color: #E8A930">بالے نوں گولی کِنّے ماری؟</p>
 <p style="margin: 0; max-width: 640px; font-size: 19px; color: #D9CBB9">The promo shows a young gunman taking aim at Iqbal "Baala" Channan. Pick your suspect, defend your theory, and see if you called it when the truth airs.</p>
 </section>
+</div>
 
 <section id="vote" style="max-width: 1160px; margin: 0 auto; padding: 24px 24px 56px; display: flex; flex-direction: column; gap: 24px">
 <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px">
@@ -49,16 +53,24 @@ textarea,select,button,input{font-family:Inter,system-ui,sans-serif}
 </div>
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px">
 <sc-for list="{{suspects}}" as="s" hint-placeholder-count="5">
-<article style="display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 16px; background: {{s.bg}}; border: 2px solid {{s.border}}">
+<article style="position: relative; overflow: hidden; display: flex; flex-direction: column; min-height: 420px; border-radius: 16px; background: {{s.bg}}; border: 2px solid {{s.border}}">
+<sc-if value="{{s.hasImg}}" hint-placeholder-val="{{ false }}">
+<img src="{{s.img}}" alt="" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 15%">
+<div aria-hidden="true" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(180deg, rgba(23,17,13,0.05) 0%, rgba(23,17,13,0.35) 30%, rgba(23,17,13,0.88) 55%, rgba(23,17,13,0.98) 75%)"></div>
+</sc-if>
+<div style="position: relative; display: flex; flex-direction: column; gap: 14px; padding: 20px; flex-grow: 1">
 <div style="display: flex; align-items: center; justify-content: space-between">
+<sc-if value="{{s.noImg}}" hint-placeholder-val="{{ true }}">
 <span style="width: 56px; height: 56px; border-radius: 50%; background: #2E241B; border: 1px solid #5A4420; display: flex; align-items: center; justify-content: center; font-family: Anton, Impact, sans-serif; font-size: 26px; color: #E8A930">{{s.mono}}</span>
-<span style="font-size: 12px; font-weight: 700; color: #BFAE9B; letter-spacing: 1px">#{{s.num}}</span>
+</sc-if>
+<span style="margin-left: auto; font-size: 12px; font-weight: 700; color: #F3E9DC; letter-spacing: 1px; padding: 4px 8px; border-radius: 6px; background: rgba(23,17,13,0.7)">#{{s.num}}</span>
 </div>
+<div style="flex-grow: 1"></div>
 <div style="display: flex; flex-direction: column; gap: 4px">
 <h3 style="margin: 0; font-size: 19px; font-weight: 700; line-height: 1.25">{{s.name}}</h3>
 <p style="margin: 0; font-size: 13px; font-weight: 600; color: #E8A930">{{s.role}}</p>
 </div>
-<p style="margin: 0; font-size: 14px; color: #D9CBB9; flex-grow: 1"><strong style="color: #F3E9DC">Motive:</strong> {{s.motive}}</p>
+<p style="margin: 0; font-size: 14px; color: #E2D6C6"><strong style="color: #F3E9DC">Motive:</strong> {{s.motive}}</p>
 <sc-if value="{{voted}}" hint-placeholder-val="{{ false }}">
 <div style="display: flex; flex-direction: column; gap: 6px">
 <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700"><span>{{s.pct}}%</span><span style="color: #BFAE9B">{{s.count}} votes</span></div>
@@ -66,6 +78,7 @@ textarea,select,button,input{font-family:Inter,system-ui,sans-serif}
 </div>
 </sc-if>
 <button type="button" onClick="{{s.vote}}" style="min-height: 44px; border-radius: 10px; border: 1px solid {{s.btnBorder}}; background: {{s.btnBg}}; color: {{s.btnColor}}; font-size: 15px; font-weight: 700; cursor: pointer">{{s.btnLabel}}</button>
+</div>
 </article>
 </sc-for>
 </div>
@@ -143,7 +156,7 @@ textarea,select,button,input{font-family:Inter,system-ui,sans-serif}
 
 <footer style="border-top: 1px solid #3A2D22">
 <div style="max-width: 1160px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; font-size: 13px; color: #BFAE9B">
-<span>A fan-made poll about the drama Mitti De Baway. Not affiliated with Green Entertainment or the show's makers.</span>
+<span>A fan-made poll about the drama Mitti De Baway. Not affiliated with Green Entertainment or the show's makers. Stills © their respective owners.</span>
 <span>[YOUR DOMAIN]</span>
 </div>
 </footer>
@@ -151,11 +164,11 @@ textarea,select,button,input{font-family:Inter,system-ui,sans-serif}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":2400}}'>
 var SUSPECTS = [
-  { id: 'qadir', mono: 'Q', name: 'Qadir', role: "Qamar-un-Nissa's son", motive: "Baala is getting close to his mother, and he doesn't like it." },
-  { id: 'billo', mono: 'B', name: "Billo's eldest son", role: 'Heir to the feud', motive: 'Years of bad blood between the two families.' },
-  { id: 'phajja', mono: 'P', name: "Phajja's son", role: 'A son with a score', motive: 'Baala killed his father.' },
-  { id: 'insider', mono: 'I', name: 'The insider', role: 'Servant, munshi or guard', motive: 'Someone trusted, close enough to know every plan.' },
-  { id: 'alive', mono: '?', name: 'Nobody: Baala lives', role: 'Plot-twist camp', motive: '"Hero bhi kabhi marta hai?" The writer has hinted at more.' }
+  { id: 'qadir', mono: 'Q', name: 'Qadir', role: "Qamar-un-Nissa's son", motive: "Baala is getting close to his mother, and he doesn't like it.", img: '/_blob/cf632df2275c7fdf21f87c850528024e' },
+  { id: 'billo', mono: 'B', name: "Billo's eldest son", role: 'Heir to the feud', motive: 'Years of bad blood between the two families.', img: '/_blob/caefa99279747c00f51c73a9d9bba4cc' },
+  { id: 'phajja', mono: 'P', name: "Phajja's son", role: 'A son with a score', motive: 'Baala killed his father.', img: '/_blob/d14b2518426c2bde66a713d363061db3' },
+  { id: 'insider', mono: 'I', name: 'The insider', role: 'Servant, munshi or guard', motive: 'Someone trusted, close enough to know every plan.', img: '/_blob/5071f466d20a0fb3d094ad81d61fab69' },
+  { id: 'alive', mono: '?', name: 'Nobody: Baala lives', role: 'Plot-twist camp', motive: '"Hero bhi kabhi marta hai?" The writer has hinted at more.', img: '/_blob/d82473d2e12220c1e702fefaf5099bff' }
 ];
 var NAMES = { qadir: 'Qadir', billo: "Billo's son", phajja: "Phajja's son", insider: 'the insider', alive: 'nobody' };
 
@@ -196,6 +209,8 @@ class Component extends DCLogic {
       var count = st.votes[s.id];
       return Object.assign({}, s, {
         num: i + 1,
+        hasImg: !!s.img,
+        noImg: !s.img,
         count: count,
         pct: total ? Math.round(count / total * 100) : 0,
         bg: mine ? '#2A2014' : '#1E1712',
