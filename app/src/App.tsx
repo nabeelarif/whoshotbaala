@@ -22,6 +22,13 @@ import './App.css'
 
 const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY
 
+declare global {
+  interface Window {
+    dataLayer?: IArguments[]
+    gtag?: (...args: unknown[]) => void
+  }
+}
+
 type Suspect = {
   id: string
   mono: string
@@ -288,35 +295,53 @@ function App() {
                 ? `The reveal was ${suspectLabels[pollStatus.revealed_answer] ?? pollStatus.revealed_answer}. Your pick was different.`
                 : `The reveal was ${suspectLabels[pollStatus.revealed_answer] ?? pollStatus.revealed_answer}. No saved vote was found for this browser.`
 
-  const shareUrl = () => window.location.href.split('#')[0]
-  const shareMessage = () => {
+  type ShareChannel = 'whatsapp' | 'instagram_story' | 'x' | 'copy_link'
+
+  const shareUrl = (channel: ShareChannel) => {
+    const url = new URL(window.location.href)
+    url.hash = ''
+    url.searchParams.set('utm_source', channel)
+    url.searchParams.set('utm_medium', 'share')
+    url.searchParams.set('utm_content', myVote ?? 'unselected')
+    return url.toString()
+  }
+
+  const trackShareClicked = (channel: ShareChannel) => {
+    if (!myVote || typeof window.gtag !== 'function') return
+    window.gtag('event', 'share_clicked', { channel, suspect: myVote })
+  }
+
+  const shareMessage = (channel: ShareChannel) => {
     if (!myVote) return 'Who Shot Baala? Cast your vote.'
     const verdict = hasCalledIt ? 'I CALLED IT!' : `I think ${suspectLabels[myVote]} shot Baala.`
     const agreement = agreementPercent === null
       ? ''
       : ` ${agreementPercent}% of fans agree (${totalVotes.toLocaleString()} votes).`
-    return `${verdict}${agreement} Vote in the fan poll: ${shareUrl()}`
+    return `${verdict}${agreement} Vote in the fan poll: ${shareUrl(channel)}`
   }
 
   const handleWhatsAppShare = () => {
+    trackShareClicked('whatsapp')
     window.open(
-      `https://wa.me/?text=${encodeURIComponent(shareMessage())}`,
+      `https://wa.me/?text=${encodeURIComponent(shareMessage('whatsapp'))}`,
       '_blank',
       'noopener,noreferrer',
     )
   }
 
   const handleXShare = () => {
+    trackShareClicked('x')
     window.open(
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage())}`,
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage('x'))}`,
       '_blank',
       'noopener,noreferrer',
     )
   }
 
   const handleCopyLink = async () => {
+    trackShareClicked('copy_link')
     try {
-      await navigator.clipboard.writeText(shareUrl())
+      await navigator.clipboard.writeText(shareUrl('copy_link'))
       setShareStatus('Poll link copied.')
     } catch {
       setShareStatus('Could not access the clipboard. Copy the page URL from your browser.')
@@ -325,6 +350,7 @@ function App() {
 
   const handleInstagramStory = async () => {
     if (!myVote) return
+    trackShareClicked('instagram_story')
 
     try {
       const file = await createVerdictStoryCard({
@@ -332,7 +358,7 @@ function App() {
         agreementPercent,
         totalVotes,
         calledIt: hasCalledIt,
-        shareUrl: shareUrl(),
+        shareUrl: shareUrl('instagram_story'),
       })
 
       if (
@@ -343,7 +369,7 @@ function App() {
         await navigator.share({
           files: [file],
           title: 'My Who Shot Baala verdict',
-          text: shareMessage(),
+          text: shareMessage('instagram_story'),
         })
         setShareStatus('Share card ready to post to your story.')
         return
