@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="700" y1="0" x2="700" y2="900" gradientUnits="userSpaceOnUse"><stop stop-color="#493127"/><stop offset=".52" stop-color="#241912"/><stop offset="1" stop-color="#17110D"/></linearGradient>
+    <radialGradient id="sun" cx="0" cy="0" r="1" gradientTransform="matrix(0 380 -380 0 1040 280)" gradientUnits="userSpaceOnUse"><stop stop-color="#E8A930" stop-opacity=".72"/><stop offset="1" stop-color="#E8A930" stop-opacity="0"/></radialGradient>
+    <linearGradient id="dune" x1="670" y1="510" x2="700" y2="900" gradientUnits="userSpaceOnUse"><stop stop-color="#8A5930"/><stop offset="1" stop-color="#241912"/></linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1400v900H0z"/><path fill="url(#sun)" d="M0 0h1400v900H0z"/>
+  <circle cx="1050" cy="286" r="118" fill="#E8A930" fill-opacity=".44"/>
+  <path d="M0 592c183-78 332-92 506-32 157 55 275 45 440-43 169-90 279-106 454-48v431H0V592Z" fill="#37251A"/>
+  <path d="M0 700c210-120 401-116 612-44 226 77 363 31 505-36 104-50 192-56 283-23v303H0V700Z" fill="url(#dune)"/>
+  <path d="M750 548c76-83 128-113 186-119l44 46 58 16-23 27-87-8-72 70-106-32Z" fill="#17110D" fill-opacity=".9"/>
+  <path d="m954 436 38-42 32 8 15 34-28 31-57-31Z" fill="#17110D" fill-opacity=".9"/>
+  <path d="M0 0h1400v900H0z" fill="#17110D" fill-opacity=".14"/>
+</svg>

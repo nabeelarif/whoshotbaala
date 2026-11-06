@@ -59,7 +59,7 @@ const suspects: Suspect[] = [
     role: "Qamar-un-Nissa's son",
     motive: 'Baala is getting close to his mother, and he does not like it.',
     shortLabel: 'Qadir',
-    image: '/images/qadir-bg.jpg',
+    image: '/images/qadir-art.svg',
   },
   {
     id: 'billo',
@@ -68,7 +68,7 @@ const suspects: Suspect[] = [
     role: 'Heir to the feud',
     motive: 'Years of bad blood between the two families.',
     shortLabel: "Billo's son",
-    image: '/images/billo-bg.jpg',
+    image: '/images/billo-art.svg',
   },
   {
     id: 'phajja',
@@ -77,7 +77,7 @@ const suspects: Suspect[] = [
     role: 'A son with a score',
     motive: 'Baala killed his father.',
     shortLabel: "Phajja's son",
-    image: '/images/phajja-bg.jpg',
+    image: '/images/phajja-art.svg',
   },
   {
     id: 'insider',
@@ -86,7 +86,7 @@ const suspects: Suspect[] = [
     role: 'Servant, munshi or guard',
     motive: 'Someone trusted, close enough to know every plan.',
     shortLabel: 'The insider',
-    image: '/images/insider-bg.jpg',
+    image: '/images/insider-art.svg',
   },
   {
     id: 'alive',
@@ -95,47 +95,11 @@ const suspects: Suspect[] = [
     role: 'Plot-twist camp',
     motive: '"Hero bhi kabhi marta hai?" The writer keeps hinting at more.',
     shortLabel: 'Baala lives',
-    image: '/images/baala-bg.jpg',
+    image: '/images/baala-art.svg',
   },
 ]
 
 const initialVotes: Record<string, number> = demoVoteCounts
-
-const initialComments: Comment[] = [
-  {
-    id: 'demo-1',
-    userId: '',
-    parentId: null,
-    user: 'Sample comment',
-    tag: 'qadir',
-    text: 'Every time his mother looks at Baala, watch Qadir’s face. That boy is a loaded gun.',
-    likes: 12,
-    liked: false,
-    time: '2h ago',
-  },
-  {
-    id: 'demo-2',
-    userId: '',
-    parentId: null,
-    user: 'Sample comment',
-    tag: 'phajja',
-    text: 'Revenge always comes back in this story. Phajja’s son has the clearest reason of anyone.',
-    likes: 8,
-    liked: false,
-    time: '4h ago',
-  },
-  {
-    id: 'demo-3',
-    userId: '',
-    parentId: null,
-    user: 'Sample comment',
-    tag: 'alive',
-    text: 'Faiza Iftikhar would not kill the hero off in a promo. It’s a fake-out.',
-    likes: 15,
-    liked: true,
-    time: '6h ago',
-  },
-]
 
 const suspectLabels: Record<string, string> = {
   qadir: 'Qadir',
@@ -158,14 +122,18 @@ function formatRelativeTime(value: string) {
 }
 
 function App() {
-  const [votes, setVotes] = useState<Record<string, number>>(initialVotes)
+  const [votes, setVotes] = useState<Record<string, number>>(
+    isSupabaseConfigured
+      ? { qadir: 0, billo: 0, phajja: 0, insider: 0, alive: 0 }
+      : initialVotes,
+  )
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const turnstileRef = useRef<TurnstileInstance | null>(null)
   const [myVote, setMyVote] = useState<string | null>(null)
   const [filter, setFilter] = useState('all')
   const [draft, setDraft] = useState('')
   const [tag, setTag] = useState('qadir')
-  const [comments, setComments] = useState<Comment[]>(isSupabaseConfigured ? [] : initialComments)
+  const [comments, setComments] = useState<Comment[]>([])
   const [isSubmittingVote, setIsSubmittingVote] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
   const [voteStatus, setVoteStatus] = useState<string | null>(null)
@@ -578,7 +546,14 @@ function App() {
 
       <main>
         <div className="hero-banner">
-          <img className="hero-banner-image" src="/images/hero-gunman.jpg" alt="" />
+          <img
+            className="hero-banner-image"
+            src="/images/hero-art.svg"
+            alt=""
+            width="1400"
+            height="900"
+            fetchPriority="high"
+          />
           <div className="hero-banner-shade" aria-hidden="true" />
           <section className="hero-section container">
             <div className="pill-row">
@@ -592,7 +567,7 @@ function App() {
               the trigger?
             </h1>
 
-            <p className="urdu-line" dir="rtl" lang="pa">
+            <p className="urdu-line" dir="rtl" lang="pa-Arab">
               بالے نوں گولی کِنّے ماری؟
             </p>
 
@@ -646,7 +621,15 @@ function App() {
                   key={suspect.id}
                   className={`suspect-card ${isSelected ? 'selected' : ''}`}
                 >
-                  <img className="suspect-card-image" src={suspect.image} alt="" />
+                  <img
+                    className="suspect-card-image"
+                    src={suspect.image}
+                    alt=""
+                    width="640"
+                    height="960"
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <div className="suspect-card-shade" aria-hidden="true" />
                   <div className="suspect-card-content">
                     <div className="card-head">
@@ -1020,8 +1003,8 @@ function App() {
 
       <footer className="site-footer">
         <div className="container footer-inner">
-          <span>A fan-made poll about the drama Mitti De Baway. Not affiliated with Green Entertainment or the show’s makers. Stills © their respective owners.</span>
-          <span>[YOUR DOMAIN]</span>
+          <span>A fan-made poll about the drama Mitti De Baway. Not affiliated with Green Entertainment or the show’s makers.</span>
+          <a href="https://whoshotbaala.com/">whoshotbaala.com</a>
         </div>
       </footer>
     </div>

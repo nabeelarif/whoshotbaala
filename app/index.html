@@ -15,12 +15,12 @@
     </script>
     <script type="module">
       if (import.meta.env.PROD) {
-        const measurementId = '%VITE_GA_MEASUREMENT_ID%';
-        if (measurementId && !measurementId.startsWith('%')) {
+        const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID;
+        if (measurementId) {
           window.dataLayer = window.dataLayer || [];
           window.gtag = function () { window.dataLayer.push(arguments); };
           window.gtag('js', new Date());
-          window.gtag('config', measurementId);
+          window.gtag('config', measurementId, { send_page_view: false });
 
           const googleTag = document.createElement('script');
           googleTag.async = true;
@@ -31,14 +31,49 @@
     </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>app</title>
+    <meta name="theme-color" content="#17110d" />
+    <meta name="description" content="Who shot Baala in Mitti De Baway? Cast your vote, explore fan theories, and share your verdict. An unofficial fan poll; not affiliated with Green Entertainment." />
+    <link rel="canonical" href="https://whoshotbaala.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Who Shot Baala? Fan Poll" />
+    <meta property="og:title" content="Who Shot Baala? | Mitti De Baway Fan Poll" />
+    <meta property="og:description" content="Cast your vote, explore fan theories, and share your verdict in this unofficial Mitti De Baway fan poll." />
+    <meta property="og:url" content="https://whoshotbaala.com/" />
+    <meta property="og:image" content="https://whoshotbaala.com/images/social-preview.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Original artwork for the unofficial Who Shot Baala fan poll." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Who Shot Baala? | Mitti De Baway Fan Poll" />
+    <meta name="twitter:description" content="Cast your vote, explore fan theories, and share your verdict in this unofficial fan poll." />
+    <meta name="twitter:image" content="https://whoshotbaala.com/images/social-preview.png" />
+    <title>Who Shot Baala? | Mitti De Baway Fan Poll</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Who Shot Baala? Fan Poll",
+        "url": "https://whoshotbaala.com/",
+        "description": "An unofficial fan poll and theory board about the Pakistani drama Mitti De Baway.",
+        "inLanguage": ["en", "pa-Arab"]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- Cloudflare Web Analytics -->
-    <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8686f91269b04274adcc49e83548b293"}'></script>
-    <!-- End Cloudflare Web Analytics -->
+    <script type="module">
+      if (import.meta.env.PROD) {
+        const beacon = document.createElement('script');
+        beacon.type = 'module';
+        beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+        beacon.setAttribute('data-cf-beacon', '{"token":"8686f91269b04274adcc49e83548b293"}');
+        document.body.appendChild(beacon);
+      }
+    </script>
   </body>
 </html>
