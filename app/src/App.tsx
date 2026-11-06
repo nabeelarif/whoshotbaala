@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import {
   demoVoteCounts,
@@ -174,6 +174,38 @@ function App() {
       authListener.subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!user) return
+
+    const storageKey = 'who-shot-baala-oauth-return-position'
+    const savedPosition = sessionStorage.getItem(storageKey)
+    if (!savedPosition) return
+
+    sessionStorage.removeItem(storageKey)
+    try {
+      const position = JSON.parse(savedPosition) as {
+        scrollY: number
+        sectionId: string | null
+        sectionOffset: number | null
+      }
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const section = position.sectionId
+            ? document.getElementById(position.sectionId)
+            : null
+          const top = section && position.sectionOffset !== null
+            ? window.scrollY + section.getBoundingClientRect().top + position.sectionOffset
+            : position.scrollY
+
+          window.scrollTo({ top, behavior: 'auto' })
+        })
+      })
+    } catch {
+      // Ignore malformed stored position and leave the user at the page start.
+    }
+  }, [user])
 
   const refreshPollCounts = useCallback(async () => {
     try {
@@ -447,11 +479,23 @@ function App() {
     }
   }
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (event?: MouseEvent<HTMLButtonElement>) => {
     setAuthError(null)
+    const section = event?.currentTarget.closest('section[id]')
+    const sectionId = section?.id ?? null
+    const sectionOffset = section
+      ? window.scrollY - (section.getBoundingClientRect().top + window.scrollY)
+      : null
+
+    sessionStorage.setItem(
+      'who-shot-baala-oauth-return-position',
+      JSON.stringify({ scrollY: window.scrollY, sectionId, sectionOffset }),
+    )
+
     try {
       await signInWithGoogle()
     } catch (error) {
+      sessionStorage.removeItem('who-shot-baala-oauth-return-position')
       setAuthError(error instanceof Error ? error.message : 'Unable to start Google sign-in.')
     }
   }
@@ -798,7 +842,7 @@ function App() {
                 <button
                   type="button"
                   className="auth-button"
-                  onClick={() => void handleSignIn()}
+                  onClick={(event) => void handleSignIn(event)}
                   disabled={!isSupabaseConfigured || isAuthLoading}
                 >
                   {isAuthLoading ? 'Checking sign-in…' : 'Continue with Google'}
@@ -982,7 +1026,7 @@ function App() {
                             <button
                               type="button"
                               className="auth-button"
-                              onClick={() => void handleSignIn()}
+                              onClick={(event) => void handleSignIn(event)}
                               disabled={!isSupabaseConfigured || isAuthLoading}
                             >
                               Continue with Google
