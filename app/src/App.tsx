@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } fr
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import {
   demoVoteCounts,
+  deleteTheoryComment,
+  fetchProfileUsername,
   fetchPollCounts,
   fetchPollStatus,
   fetchTheories,
@@ -41,13 +43,14 @@ type Suspect = {
 
 type Comment = {
   id: string
-  userId: string
+  userId: string | null
   parentId: string | null
   user: string
   tag: string
   text: string
   likes: number
   liked: boolean
+  isDeleted: boolean
   time: string
 }
 
@@ -143,11 +146,17 @@ function App() {
   const [isLoadingPollStatus, setIsLoadingPollStatus] = useState(isSupabaseConfigured)
   const [shareStatus, setShareStatus] = useState<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
+  const [profileIdentity, setProfileIdentity] = useState<{ userId: string; username: string | null } | null>(null)
+  const profileUsername = profileIdentity && profileIdentity.userId === user?.id
+    ? profileIdentity.username
+    : null
   const [isAuthLoading, setIsAuthLoading] = useState(isSupabaseConfigured)
   const [authError, setAuthError] = useState<string | null>(null)
   const [theoryError, setTheoryError] = useState<string | null>(null)
   const [isPostingTheory, setIsPostingTheory] = useState(false)
   const [likingTheoryId, setLikingTheoryId] = useState<string | null>(null)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
+  const [theoryStatus, setTheoryStatus] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyDraft, setReplyDraft] = useState('')
   const [isPostingReply, setIsPostingReply] = useState(false)
@@ -174,6 +183,24 @@ function App() {
       authListener.subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    let isMounted = true
+
+    if (!user) return () => { isMounted = false }
+
+    void fetchProfileUsername(user.id)
+      .then((username) => {
+        if (isMounted) setProfileIdentity({ userId: user.id, username })
+      })
+      .catch((error: unknown) => {
+        if (isMounted) {
+          setAuthError(error instanceof Error ? error.message : 'Unable to load your username.')
+        }
+      })
+
+    return () => { isMounted = false }
+  }, [user])
 
   useEffect(() => {
     if (!user) return
@@ -414,11 +441,16 @@ function App() {
         id: record.id,
         userId: record.user_id,
         parentId: record.parent_id,
-        user: record.user_id === user?.id ? 'You' : 'Fan',
+        user: record.deleted_at
+          ? 'Deleted user'
+          : record.user_id === user?.id
+            ? 'You'
+            : record.username ?? 'Community member',
         tag: record.option_key,
-        text: record.body,
+        text: record.deleted_at ? 'This comment was deleted.' : record.body,
         likes: record.likes,
         liked: record.liked,
+        isDeleted: Boolean(record.deleted_at),
         time: formatRelativeTime(record.created_at),
       })))
       setTheoryError(null)
@@ -523,6 +555,34 @@ function App() {
       setTheoryError(error instanceof Error ? error.message : 'Unable to update this like.')
     } finally {
       setLikingTheoryId(null)
+    }
+  }
+
+  const handleDeleteComment = async (comment: Comment) => {
+    if (!user || comment.userId !== user.id || comment.isDeleted || deletingCommentId) return
+
+    const hasReplies = comments.some((reply) => reply.parentId === comment.id)
+    const confirmMessage = hasReplies
+      ? 'Delete this theory? Its replies will remain visible under a deleted-theory notice.'
+      : 'Delete this comment? This cannot be undone.'
+    if (!window.confirm(confirmMessage)) return
+
+    setDeletingCommentId(comment.id)
+    setTheoryError(null)
+    setTheoryStatus(null)
+    try {
+      const result = await deleteTheoryComment(comment.id)
+      if (replyingTo === comment.id) setReplyingTo(null)
+      await refreshTheories()
+      setTheoryStatus(
+        result.preserved_replies
+          ? 'Theory deleted. Existing replies were kept.'
+          : 'Comment deleted.',
+      )
+    } catch (error) {
+      setTheoryError(error instanceof Error ? error.message : 'Unable to delete this comment.')
+    } finally {
+      setDeletingCommentId(null)
     }
   }
 
@@ -829,7 +889,7 @@ function App() {
                 <p>
                   Signed in as{' '}
                   <strong>
-                    {String(user.user_metadata.full_name ?? user.user_metadata.name ?? user.email ?? 'community member')}
+                    {profileUsername ?? 'Creating your username…'}
                   </strong>
                 </p>
                 <button type="button" className="auth-button" onClick={() => void handleSignOut()}>
@@ -855,6 +915,7 @@ function App() {
           )}
           {authError && <p className="theory-error" role="alert">{authError}</p>}
           {theoryError && <p className="theory-error" role="alert">{theoryError}</p>}
+          {theoryStatus && <p className="theory-status" role="status">{theoryStatus}</p>}
 
           <form
             className="theory-form"
@@ -935,34 +996,51 @@ function App() {
                   <div className="comment-body">
                     <div className="comment-meta">
                       <strong>{comment.user}</strong>
-                      <span className="tag-badge">blames {suspectLabels[comment.tag]}</span>
+                      {comment.isDeleted ? (
+                        <span className="deleted-badge">deleted theory</span>
+                      ) : (
+                        <span className="tag-badge">blames {suspectLabels[comment.tag]}</span>
+                      )}
                       <span className="time">{comment.time}</span>
                     </div>
 
-                    <p>{comment.text}</p>
+                    <p className={comment.isDeleted ? 'deleted-comment-text' : undefined}>{comment.text}</p>
 
-                    <div className="comment-actions">
-                      <button
-                        type="button"
-                        onClick={() => void handleLike(comment.id)}
-                        className={`agree-button ${comment.liked ? 'liked' : ''}`}
-                        disabled={!user || likingTheoryId !== null}
-                      >
-                        {likingTheoryId === comment.id ? 'Saving…' : `Agree ${comment.likes}`}
-                      </button>
-                      <button
-                        type="button"
-                        className="reply-button"
-                        aria-expanded={replyingTo === comment.id}
-                        onClick={() => {
-                          setReplyingTo((current) => current === comment.id ? null : comment.id)
-                          setReplyDraft('')
-                          setTheoryError(null)
-                        }}
-                      >
-                        Reply ({comments.filter((reply) => reply.parentId === comment.id).length})
-                      </button>
-                    </div>
+                    {!comment.isDeleted && (
+                      <div className="comment-actions">
+                        <button
+                          type="button"
+                          onClick={() => void handleLike(comment.id)}
+                          className={`agree-button ${comment.liked ? 'liked' : ''}`}
+                          disabled={!user || likingTheoryId !== null}
+                        >
+                          {likingTheoryId === comment.id ? 'Saving…' : `Agree ${comment.likes}`}
+                        </button>
+                        <button
+                          type="button"
+                          className="reply-button"
+                          aria-expanded={replyingTo === comment.id}
+                          onClick={() => {
+                            setReplyingTo((current) => current === comment.id ? null : comment.id)
+                            setReplyDraft('')
+                            setTheoryError(null)
+                            setTheoryStatus(null)
+                          }}
+                        >
+                          Reply ({comments.filter((reply) => reply.parentId === comment.id).length})
+                        </button>
+                        {user && comment.userId === user.id && (
+                          <button
+                            type="button"
+                            className="delete-button"
+                            onClick={() => void handleDeleteComment(comment)}
+                            disabled={deletingCommentId !== null}
+                          >
+                            {deletingCommentId === comment.id ? 'Deleting…' : 'Delete'}
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     {comments
                       .filter((reply) => reply.parentId === comment.id)
@@ -976,20 +1054,34 @@ function App() {
                               <strong>{reply.user}</strong>
                               <span className="time">{reply.time}</span>
                             </div>
-                            <p>{reply.text}</p>
-                            <button
-                              type="button"
-                              onClick={() => void handleLike(reply.id)}
-                              className={`agree-button ${reply.liked ? 'liked' : ''}`}
-                              disabled={!user || likingTheoryId !== null}
-                            >
-                              {likingTheoryId === reply.id ? 'Saving…' : `Agree ${reply.likes}`}
-                            </button>
+                            <p className={reply.isDeleted ? 'deleted-comment-text' : undefined}>{reply.text}</p>
+                            {!reply.isDeleted && (
+                              <div className="comment-actions">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleLike(reply.id)}
+                                  className={`agree-button ${reply.liked ? 'liked' : ''}`}
+                                  disabled={!user || likingTheoryId !== null}
+                                >
+                                  {likingTheoryId === reply.id ? 'Saving…' : `Agree ${reply.likes}`}
+                                </button>
+                                {user && reply.userId === user.id && (
+                                  <button
+                                    type="button"
+                                    className="delete-button"
+                                    onClick={() => void handleDeleteComment(reply)}
+                                    disabled={deletingCommentId !== null}
+                                  >
+                                    {deletingCommentId === reply.id ? 'Deleting…' : 'Delete'}
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </article>
                       ))}
 
-                    {replyingTo === comment.id && (
+                    {replyingTo === comment.id && !comment.isDeleted && (
                       <form
                         className="reply-composer"
                         onSubmit={(event) => {

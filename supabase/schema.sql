@@ -48,11 +48,15 @@ create table if not exists public.comments (
   body text not null,
   likes integer not null default 0,
   created_at timestamptz not null default now(),
-  hidden boolean not null default false
+  hidden boolean not null default false,
+  deleted_at timestamptz
 );
 
 alter table public.comments
 add column if not exists parent_id uuid references public.comments(id) on delete cascade;
+
+alter table public.comments
+add column if not exists deleted_at timestamptz;
 
 create table if not exists public.comment_likes (
   comment_id uuid not null references public.comments(id) on delete cascade,
@@ -60,6 +64,102 @@ create table if not exists public.comment_likes (
   created_at timestamptz not null default now(),
   primary key (comment_id, user_id)
 );
+
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  username text not null,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists profiles_username_ci_unique
+  on public.profiles (lower(username));
+
+create or replace function public.ensure_profile_for_user(p_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  adjectives text[] := array[
+    'Amber', 'Brave', 'Calm', 'Clever', 'Cosmic', 'Crimson', 'Golden', 'Jolly',
+    'Lucky', 'Mellow', 'Misty', 'Quiet', 'Rapid', 'Silver', 'Sunny', 'Velvet'
+  ];
+  nouns text[] := array[
+    'Falcon', 'Badger', 'Comet', 'Dervish', 'Fox', 'Heron', 'Jackal', 'Kite',
+    'Mango', 'Panda', 'Raven', 'River', 'Tiger', 'Voyager', 'Willow', 'Zebra'
+  ];
+  candidate text;
+  attempt integer;
+begin
+  if p_user_id is null then
+    return;
+  end if;
+
+  if exists (select 1 from public.profiles where id = p_user_id) then
+    return;
+  end if;
+
+  for attempt in 1..100 loop
+    candidate := adjectives[1 + floor(random() * array_length(adjectives, 1))::integer]
+      || nouns[1 + floor(random() * array_length(nouns, 1))::integer]
+      || (100 + floor(random() * 900)::integer)::text;
+
+    begin
+      insert into public.profiles (id, username)
+      values (p_user_id, candidate);
+      return;
+    exception when unique_violation then
+      if exists (select 1 from public.profiles where id = p_user_id) then
+        return;
+      end if;
+      -- A different account took this handle; generate another candidate.
+    end;
+  end loop;
+
+  raise exception 'Could not generate a unique public username after % attempts', attempt;
+end;
+$$;
+
+create or replace function public.handle_new_auth_profile()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.ensure_profile_for_user(new.id);
+  return new;
+end;
+$$;
+
+revoke all on function public.ensure_profile_for_user(uuid) from public, anon, authenticated;
+revoke all on function public.handle_new_auth_profile() from public, anon, authenticated;
+
+drop trigger if exists on_auth_user_created_profile on auth.users;
+create trigger on_auth_user_created_profile
+after insert on auth.users
+for each row execute function public.handle_new_auth_profile();
+
+do $$
+declare
+  existing_user record;
+begin
+  for existing_user in select id from auth.users loop
+    perform public.ensure_profile_for_user(existing_user.id);
+  end loop;
+end;
+$$;
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "public usernames are readable" on public.profiles;
+create policy "public usernames are readable" on public.profiles
+for select to anon, authenticated
+using (true);
+
+revoke all on public.profiles from public, anon, authenticated;
+grant select on public.profiles to anon, authenticated;
 
 -- Initial poll setup. Adjust locks_at to the actual voting deadline in Supabase.
 insert into public.polls (slug, title, locks_at)
@@ -257,6 +357,7 @@ with check (
         and parent.parent_id is null
         and parent.poll_id = comments.poll_id
         and parent.option_id = comments.option_id
+        and parent.deleted_at is null
     )
   )
 );
@@ -283,7 +384,7 @@ begin
 
   perform 1
   from public.comments
-  where id = p_comment_id and hidden = false
+  where id = p_comment_id and hidden = false and deleted_at is null
   for update;
 
   if not found then
@@ -325,7 +426,57 @@ $$;
 revoke all on function public.toggle_comment_like(uuid) from public;
 grant execute on function public.toggle_comment_like(uuid) to authenticated;
 
+create or replace function public.delete_own_theory_comment(p_comment_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_comment public.comments;
+  v_preserved_replies boolean;
+begin
+  if v_user_id is null then
+    raise exception 'Sign in is required to delete a theory or reply';
+  end if;
+
+  select * into v_comment
+  from public.comments
+  where id = p_comment_id
+  for update;
+
+  if not found or v_comment.user_id is distinct from v_user_id then
+    raise exception 'You can only delete your own theory or reply';
+  end if;
+
+  if v_comment.deleted_at is not null then
+    raise exception 'This theory or reply has already been deleted';
+  end if;
+
+  select exists (
+    select 1 from public.comments where parent_id = p_comment_id
+  ) into v_preserved_replies;
+
+  if v_preserved_replies then
+    update public.comments
+    set body = '[deleted]', user_id = null, deleted_at = now(), likes = 0
+    where id = p_comment_id;
+
+    delete from public.comment_likes where comment_id = p_comment_id;
+  else
+    delete from public.comments where id = p_comment_id;
+  end if;
+
+  return jsonb_build_object('deleted', true, 'preserved_replies', v_preserved_replies);
+end;
+$$;
+
+revoke all on function public.delete_own_theory_comment(uuid) from public, anon, authenticated;
+grant execute on function public.delete_own_theory_comment(uuid) to authenticated;
+
 grant usage on schema public to anon, authenticated;
 grant select on public.polls, public.options, public.option_counts, public.comments to anon, authenticated;
 grant insert on public.comments to authenticated;
 grant select on public.comment_likes to authenticated;
+revoke update, delete on public.comments from public, anon, authenticated;

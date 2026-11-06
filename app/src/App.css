@@ -596,6 +596,12 @@
   color: #ffb4a8;
 }
 
+.theory-status {
+  margin: 0 0 12px;
+  color: #d7f5d5;
+  font-size: 14px;
+}
+
 .theory-form {
   display: flex;
   flex-direction: column;
@@ -839,6 +845,34 @@
   border: 1px solid var(--color-line);
   background: transparent;
   color: var(--color-muted);
+}
+
+.delete-button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #6b2f23;
+  border-radius: 8px;
+  background: transparent;
+  color: #ffb4a8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.delete-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.deleted-badge {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.deleted-comment-text {
+  color: var(--color-muted) !important;
+  font-style: italic;
 }
 
 .empty-state {

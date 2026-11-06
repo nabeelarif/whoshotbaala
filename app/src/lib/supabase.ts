@@ -33,13 +33,33 @@ export type PollStatus = {
 
 export type TheoryRecord = {
   id: string
-  user_id: string
+  user_id: string | null
+  username: string | null
   parent_id: string | null
   option_key: string
   body: string
   likes: number
   created_at: string
+  deleted_at: string | null
   liked: boolean
+}
+
+export type DeleteTheoryCommentResult = {
+  deleted: boolean
+  preserved_replies: boolean
+}
+
+export async function fetchProfileUsername(userId: string): Promise<string | null> {
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return data?.username ?? null
 }
 
 export async function signInWithGoogle() {
@@ -164,7 +184,7 @@ export async function fetchTheories(userId: string | null): Promise<TheoryRecord
 
   const { data, error } = await supabase
     .from('comments')
-    .select('id, user_id, parent_id, option_id, body, likes, created_at')
+    .select('id, user_id, parent_id, option_id, body, likes, created_at, deleted_at')
     .eq('poll_id', poll.id)
     .eq('hidden', false)
     .order('created_at', { ascending: false })
@@ -173,12 +193,13 @@ export async function fetchTheories(userId: string | null): Promise<TheoryRecord
 
   const rows = (data ?? []) as Array<{
     id: string
-    user_id: string
+    user_id: string | null
     parent_id: string | null
     option_id: string | null
     body: string
     likes: number
     created_at: string
+    deleted_at: string | null
   }>
   const { data: options, error: optionsError } = await supabase
     .from('options')
@@ -187,6 +208,21 @@ export async function fetchTheories(userId: string | null): Promise<TheoryRecord
 
   if (optionsError) throw new Error(optionsError.message)
   const optionKeys = new Map((options ?? []).map((option) => [option.id as string, option.key as string]))
+  const authorIds = [...new Set(rows.flatMap((row) => row.user_id ? [row.user_id] : []))]
+  const usernames = new Map<string, string>()
+
+  if (authorIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('id', authorIds)
+
+    if (profilesError) throw new Error(profilesError.message)
+    for (const profile of profiles ?? []) {
+      usernames.set(profile.id as string, profile.username as string)
+    }
+  }
+
   let likedIds = new Set<string>()
 
   if (userId && rows.length > 0) {
@@ -203,11 +239,13 @@ export async function fetchTheories(userId: string | null): Promise<TheoryRecord
   return rows.map((row) => ({
     id: row.id,
     user_id: row.user_id,
+    username: row.user_id ? usernames.get(row.user_id) ?? null : null,
     parent_id: row.parent_id,
     option_key: row.option_id ? optionKeys.get(row.option_id) ?? 'qadir' : 'qadir',
     body: row.body,
     likes: Number(row.likes ?? 0),
     created_at: row.created_at,
+    deleted_at: row.deleted_at,
     liked: likedIds.has(row.id),
   }))
 }
@@ -257,9 +295,10 @@ export async function postTheoryReply(user: User, parentId: string, body: string
 
   const { data: parent, error: parentError } = await supabase
     .from('comments')
-    .select('id, poll_id, option_id, parent_id')
+    .select('id, poll_id, option_id, parent_id, deleted_at')
     .eq('id', parentId)
     .eq('hidden', false)
+    .is('deleted_at', null)
     .single()
 
   if (parentError) throw new Error(parentError.message)
@@ -286,4 +325,16 @@ export async function toggleTheoryLike(commentId: string) {
   if (error) throw new Error(error.message)
 
   return data as { liked: boolean; likes: number }
+}
+
+export async function deleteTheoryComment(commentId: string): Promise<DeleteTheoryCommentResult> {
+  if (!supabase) throw new Error('Supabase is not configured.')
+
+  const { data, error } = await supabase.rpc('delete_own_theory_comment', {
+    p_comment_id: commentId,
+  })
+
+  if (error) throw new Error(error.message)
+
+  return data as DeleteTheoryCommentResult
 }
