@@ -295,7 +295,7 @@ function App() {
                 ? `The reveal was ${suspectLabels[pollStatus.revealed_answer] ?? pollStatus.revealed_answer}. Your pick was different.`
                 : `The reveal was ${suspectLabels[pollStatus.revealed_answer] ?? pollStatus.revealed_answer}. No saved vote was found for this browser.`
 
-  type ShareChannel = 'whatsapp' | 'instagram_story' | 'x' | 'copy_link'
+  type ShareChannel = 'whatsapp' | 'instagram_story' | 'x' | 'facebook' | 'copy_link'
 
   const shareUrl = (channel: ShareChannel) => {
     const url = new URL(window.location.href)
@@ -333,6 +333,15 @@ function App() {
     trackShareClicked('x')
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage('x'))}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
+  }
+
+  const handleFacebookShare = () => {
+    trackShareClicked('facebook')
+    window.open(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl('facebook'))}`,
       '_blank',
       'noopener,noreferrer',
     )
@@ -759,6 +768,14 @@ function App() {
                 disabled={!myVote}
               >
                 Post on X
+              </button>
+              <button
+                type="button"
+                className="social-btn neutral"
+                onClick={handleFacebookShare}
+                disabled={!myVote}
+              >
+                Share on Facebook
               </button>
               <button
                 type="button"
