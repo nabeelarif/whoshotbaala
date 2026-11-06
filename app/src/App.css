@@ -322,6 +322,20 @@
 }
 
 .suspect-card.selected .mono-badge {
+
+.turnstile-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.turnstile-wrap p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
   background: #2e241b;
   border-color: var(--color-accent);
 }
@@ -738,6 +752,68 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.theory-reply {
+  display: flex;
+  gap: 12px;
+  margin: 4px 0 0 12px;
+  padding: 14px;
+  border-left: 2px solid #5a4420;
+  border-radius: 0 10px 10px 0;
+  background: #17110d;
+}
+
+.theory-reply .comment-avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+}
+
+.reply-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 0 12px;
+  padding: 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: #17110d;
+}
+
+.reply-composer label,
+.reply-composer p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.reply-composer textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid #5a4420;
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.reply-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reply-composer-actions span {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.reply-composer .post-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .agree-button,

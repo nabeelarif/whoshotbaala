@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import {
   demoVoteCounts,
   fetchPollCounts,
@@ -6,6 +7,7 @@ import {
   fetchTheories,
   isSupabaseConfigured,
   postTheory,
+  postTheoryReply,
   signInWithGoogle,
   signOut,
   submitVote,
@@ -17,6 +19,8 @@ import {
 import { createVerdictStoryCard } from './lib/shareCard'
 import type { User } from '@supabase/supabase-js'
 import './App.css'
+
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY
 
 type Suspect = {
   id: string
@@ -30,6 +34,7 @@ type Suspect = {
 type Comment = {
   id: string
   userId: string
+  parentId: string | null
   user: string
   tag: string
   text: string
@@ -87,6 +92,7 @@ const initialComments: Comment[] = [
   {
     id: 'demo-1',
     userId: '',
+    parentId: null,
     user: 'Sample comment',
     tag: 'qadir',
     text: 'Every time his mother looks at Baala, watch Qadir’s face. That boy is a loaded gun.',
@@ -97,6 +103,7 @@ const initialComments: Comment[] = [
   {
     id: 'demo-2',
     userId: '',
+    parentId: null,
     user: 'Sample comment',
     tag: 'phajja',
     text: 'Revenge always comes back in this story. Phajja’s son has the clearest reason of anyone.',
@@ -107,6 +114,7 @@ const initialComments: Comment[] = [
   {
     id: 'demo-3',
     userId: '',
+    parentId: null,
     user: 'Sample comment',
     tag: 'alive',
     text: 'Faiza Iftikhar would not kill the hero off in a promo. It’s a fake-out.',
@@ -138,6 +146,8 @@ function formatRelativeTime(value: string) {
 
 function App() {
   const [votes, setVotes] = useState<Record<string, number>>(initialVotes)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileInstance | null>(null)
   const [myVote, setMyVote] = useState<string | null>(null)
   const [filter, setFilter] = useState('all')
   const [draft, setDraft] = useState('')
@@ -157,6 +167,9 @@ function App() {
   const [theoryError, setTheoryError] = useState<string | null>(null)
   const [isPostingTheory, setIsPostingTheory] = useState(false)
   const [likingTheoryId, setLikingTheoryId] = useState<string | null>(null)
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyDraft, setReplyDraft] = useState('')
+  const [isPostingReply, setIsPostingReply] = useState(false)
 
   useEffect(() => {
     if (!supabase) return
@@ -346,8 +359,9 @@ function App() {
   }
 
   const visibleComments = useMemo(() => {
-    if (filter === 'all') return comments
-    return comments.filter((comment) => comment.tag === filter)
+    const theories = comments.filter((comment) => comment.parentId === null)
+    if (filter === 'all') return theories
+    return theories.filter((comment) => comment.tag === filter)
   }, [comments, filter])
 
   const refreshTheories = useCallback(async () => {
@@ -358,6 +372,7 @@ function App() {
       setComments(records.map((record: TheoryRecord) => ({
         id: record.id,
         userId: record.user_id,
+        parentId: record.parent_id,
         user: record.user_id === user?.id ? 'You' : 'Fan',
         tag: record.option_key,
         text: record.body,
@@ -378,12 +393,16 @@ function App() {
 
   const handleVote = async (id: string) => {
     if (myVote === id || isSubmittingVote) return
+    if (isSupabaseConfigured && !turnstileToken) {
+      setVoteError('Complete the Turnstile verification before voting.')
+      return
+    }
 
     setIsSubmittingVote(true)
     setVoteError(null)
 
     try {
-      const result = await submitVote(id)
+      const result = await submitVote(id, turnstileToken ?? undefined)
 
       setVotes((current) => {
         const next = { ...current }
@@ -413,6 +432,8 @@ function App() {
           : 'Something went wrong while submitting your vote. Please try again.',
       )
     } finally {
+      setTurnstileToken(null)
+      turnstileRef.current?.reset()
       setIsSubmittingVote(false)
     }
   }
@@ -472,6 +493,27 @@ function App() {
     }
   }
 
+  const handlePostReply = async (parentId: string) => {
+    if (!user || isPostingReply) return
+    if (!replyDraft.trim()) {
+      setTheoryError('Write a reply before posting.')
+      return
+    }
+
+    setIsPostingReply(true)
+    setTheoryError(null)
+    try {
+      await postTheoryReply(user, parentId, replyDraft)
+      setReplyDraft('')
+      setReplyingTo(null)
+      await refreshTheories()
+    } catch (error) {
+      setTheoryError(error instanceof Error ? error.message : 'Unable to post your reply.')
+    } finally {
+      setIsPostingReply(false)
+    }
+  }
+
   return (
     <div className="page-shell">
       <header className="topbar">
@@ -524,6 +566,29 @@ function App() {
 
           {voteStatus && <p className="vote-status">{voteStatus}</p>}
           {voteError && <p className="vote-error">{voteError}</p>}
+          {isSupabaseConfigured && turnstileSiteKey ? (
+            <div className="turnstile-wrap">
+              <p>Verify to cast your vote</p>
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={turnstileSiteKey}
+                onSuccess={(token) => {
+                  setTurnstileToken(token)
+                  setVoteError(null)
+                }}
+                onExpire={() => setTurnstileToken(null)}
+                onError={() => {
+                  setTurnstileToken(null)
+                  setVoteError('Turnstile could not load. Check the site key and allowed domain.')
+                }}
+                options={{ action: 'vote', theme: 'dark' }}
+              />
+            </div>
+          ) : isSupabaseConfigured ? (
+            <p className="vote-error">
+              Voting is unavailable until VITE_TURNSTILE_SITE_KEY is configured.
+            </p>
+          ) : null}
 
           <div className="suspects-grid">
             {suspects.map((suspect, index) => {
@@ -566,7 +631,11 @@ function App() {
                     type="button"
                     className="vote-button"
                     onClick={() => void handleVote(suspect.id)}
-                    disabled={isSubmittingVote || Boolean(pollStatus?.is_locked)}
+                    disabled={
+                      isSubmittingVote ||
+                      Boolean(pollStatus?.is_locked) ||
+                      (isSupabaseConfigured && (!turnstileSiteKey || !turnstileToken))
+                    }
                   >
                     {pollStatus?.is_locked
                       ? 'Poll locked'
@@ -750,11 +819,13 @@ function App() {
               className={`filter-pill ${filter === 'all' ? 'active' : ''}`}
               onClick={() => setFilter('all')}
             >
-              All · {comments.length}
+              All · {comments.filter((comment) => comment.parentId === null).length}
             </button>
 
             {suspects.map((suspect) => {
-              const count = comments.filter((comment) => comment.tag === suspect.id).length
+              const count = comments.filter(
+                (comment) => comment.parentId === null && comment.tag === suspect.id,
+              ).length
               return (
                 <button
                   key={suspect.id}
@@ -794,10 +865,91 @@ function App() {
                       >
                         {likingTheoryId === comment.id ? 'Saving…' : `Agree ${comment.likes}`}
                       </button>
-                      <button type="button" className="reply-button">
-                        Reply
+                      <button
+                        type="button"
+                        className="reply-button"
+                        aria-expanded={replyingTo === comment.id}
+                        onClick={() => {
+                          setReplyingTo((current) => current === comment.id ? null : comment.id)
+                          setReplyDraft('')
+                          setTheoryError(null)
+                        }}
+                      >
+                        Reply ({comments.filter((reply) => reply.parentId === comment.id).length})
                       </button>
                     </div>
+
+                    {comments
+                      .filter((reply) => reply.parentId === comment.id)
+                      .map((reply) => (
+                        <article key={reply.id} className="theory-reply">
+                          <span className="comment-avatar" aria-hidden="true">
+                            {reply.user.charAt(0).toUpperCase()}
+                          </span>
+                          <div className="comment-body">
+                            <div className="comment-meta">
+                              <strong>{reply.user}</strong>
+                              <span className="time">{reply.time}</span>
+                            </div>
+                            <p>{reply.text}</p>
+                            <button
+                              type="button"
+                              onClick={() => void handleLike(reply.id)}
+                              className={`agree-button ${reply.liked ? 'liked' : ''}`}
+                              disabled={!user || likingTheoryId !== null}
+                            >
+                              {likingTheoryId === reply.id ? 'Saving…' : `Agree ${reply.likes}`}
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+
+                    {replyingTo === comment.id && (
+                      <form
+                        className="reply-composer"
+                        onSubmit={(event) => {
+                          event.preventDefault()
+                          void handlePostReply(comment.id)
+                        }}
+                      >
+                        {user ? (
+                          <>
+                            <label htmlFor={`reply-${comment.id}`}>Your reply</label>
+                            <textarea
+                              id={`reply-${comment.id}`}
+                              rows={2}
+                              value={replyDraft}
+                              onChange={(event) => setReplyDraft(event.target.value)}
+                              maxLength={500}
+                              placeholder="Add to the discussion…"
+                              disabled={isPostingReply}
+                            />
+                            <div className="reply-composer-actions">
+                              <span>{replyDraft.length}/500</span>
+                              <button
+                                type="submit"
+                                className="post-button"
+                                disabled={isPostingReply || !replyDraft.trim()}
+                              >
+                                {isPostingReply ? 'Replying…' : 'Post reply'}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p>Sign in with Google to reply to this theory.</p>
+                            <button
+                              type="button"
+                              className="auth-button"
+                              onClick={() => void handleSignIn()}
+                              disabled={!isSupabaseConfigured || isAuthLoading}
+                            >
+                              Continue with Google
+                            </button>
+                          </>
+                        )}
+                      </form>
+                    )}
                   </div>
                 </article>
               ))

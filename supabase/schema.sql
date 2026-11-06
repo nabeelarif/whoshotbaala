@@ -44,11 +44,15 @@ create table if not exists public.comments (
   poll_id uuid not null references public.polls(id) on delete cascade,
   user_id uuid,
   option_id uuid references public.options(id),
+  parent_id uuid references public.comments(id) on delete cascade,
   body text not null,
   likes integer not null default 0,
   created_at timestamptz not null default now(),
   hidden boolean not null default false
 );
+
+alter table public.comments
+add column if not exists parent_id uuid references public.comments(id) on delete cascade;
 
 create table if not exists public.comment_likes (
   comment_id uuid not null references public.comments(id) on delete cascade,
@@ -158,6 +162,9 @@ begin
 end;
 $$;
 
+revoke all on function public.cast_vote(text, text, text) from public, anon, authenticated;
+grant execute on function public.cast_vote(text, text, text) to service_role;
+
 create or replace function public.get_poll_counts(p_poll_slug text)
 returns table(option_key text, count integer)
 language sql
@@ -218,8 +225,8 @@ create policy "options are visible to everyone" on public.options
 for select using (true);
 
 drop policy if exists "votes are writable anonymously through rpc" on public.votes;
-create policy "votes are writable anonymously through rpc" on public.votes
-for insert with check (true);
+revoke insert, update, delete on public.votes from public, anon, authenticated;
+revoke insert, update, delete on public.option_counts from public, anon, authenticated;
 
 drop policy if exists "option counts are visible to everyone" on public.option_counts;
 create policy "option counts are visible to everyone" on public.option_counts
@@ -240,6 +247,17 @@ with check (
     select 1
     from public.polls p
     where p.id = poll_id and p.slug = 'who-shot-baala'
+  )
+  and (
+    comments.parent_id is null
+    or exists (
+      select 1
+      from public.comments parent
+      where parent.id = comments.parent_id
+        and parent.parent_id is null
+        and parent.poll_id = comments.poll_id
+        and parent.option_id = comments.option_id
+    )
   )
 );
 

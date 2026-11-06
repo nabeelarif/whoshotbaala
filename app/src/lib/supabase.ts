@@ -34,6 +34,7 @@ export type PollStatus = {
 export type TheoryRecord = {
   id: string
   user_id: string
+  parent_id: string | null
   option_key: string
   body: string
   likes: number
@@ -75,7 +76,7 @@ export function getAnonymousVoterId() {
   return voterId
 }
 
-export async function submitVote(optionKey: string) {
+export async function submitVote(optionKey: string, captchaToken?: string) {
   const voterId = getAnonymousVoterId()
 
   if (!supabase) {
@@ -89,10 +90,16 @@ export async function submitVote(optionKey: string) {
     }
   }
 
-  const { data, error } = await supabase.rpc('cast_vote', {
-    p_poll_slug: 'who-shot-baala',
-    p_option_key: optionKey,
-    p_voter_id: voterId,
+  if (!captchaToken) {
+    throw new Error('Complete the Turnstile verification before voting.')
+  }
+
+  const { data, error } = await supabase.functions.invoke('cast-vote', {
+    body: {
+      optionKey,
+      voterId,
+      captchaToken,
+    },
   })
 
   if (error) {
@@ -157,7 +164,7 @@ export async function fetchTheories(userId: string | null): Promise<TheoryRecord
 
   const { data, error } = await supabase
     .from('comments')
-    .select('id, user_id, option_id, body, likes, created_at')
+    .select('id, user_id, parent_id, option_id, body, likes, created_at')
     .eq('poll_id', poll.id)
     .eq('hidden', false)
     .order('created_at', { ascending: false })
@@ -167,6 +174,7 @@ export async function fetchTheories(userId: string | null): Promise<TheoryRecord
   const rows = (data ?? []) as Array<{
     id: string
     user_id: string
+    parent_id: string | null
     option_id: string | null
     body: string
     likes: number
@@ -195,6 +203,7 @@ export async function fetchTheories(userId: string | null): Promise<TheoryRecord
   return rows.map((row) => ({
     id: row.id,
     user_id: row.user_id,
+    parent_id: row.parent_id,
     option_key: row.option_id ? optionKeys.get(row.option_id) ?? 'qadir' : 'qadir',
     body: row.body,
     likes: Number(row.likes ?? 0),
@@ -232,6 +241,35 @@ export async function postTheory(user: User, optionKey: string, body: string) {
     poll_id: poll.id,
     user_id: user.id,
     option_id: option.id,
+    body: trimmedBody,
+  })
+
+  if (error) throw new Error(error.message)
+}
+
+export async function postTheoryReply(user: User, parentId: string, body: string) {
+  if (!supabase) throw new Error('Supabase is not configured.')
+
+  const trimmedBody = body.trim()
+  if (!trimmedBody || trimmedBody.length > 500) {
+    throw new Error('A reply must be between 1 and 500 characters.')
+  }
+
+  const { data: parent, error: parentError } = await supabase
+    .from('comments')
+    .select('id, poll_id, option_id, parent_id')
+    .eq('id', parentId)
+    .eq('hidden', false)
+    .single()
+
+  if (parentError) throw new Error(parentError.message)
+  if (parent.parent_id) throw new Error('Replies can only be posted to a theory.')
+
+  const { error } = await supabase.from('comments').insert({
+    poll_id: parent.poll_id,
+    user_id: user.id,
+    option_id: parent.option_id,
+    parent_id: parent.id,
     body: trimmedBody,
   })
 
