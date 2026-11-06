@@ -1,5 +1,21 @@
-import { useMemo, useState } from 'react'
-import { isSupabaseConfigured, submitVote } from './lib/supabase'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  demoVoteCounts,
+  fetchPollCounts,
+  fetchPollStatus,
+  fetchTheories,
+  isSupabaseConfigured,
+  postTheory,
+  signInWithGoogle,
+  signOut,
+  submitVote,
+  supabase,
+  toggleTheoryLike,
+  type PollStatus,
+  type TheoryRecord,
+} from './lib/supabase'
+import { createVerdictStoryCard } from './lib/shareCard'
+import type { User } from '@supabase/supabase-js'
 import './App.css'
 
 type Suspect = {
@@ -12,7 +28,8 @@ type Suspect = {
 }
 
 type Comment = {
-  id: number
+  id: string
+  userId: string
   user: string
   tag: string
   text: string
@@ -64,17 +81,12 @@ const suspects: Suspect[] = [
   },
 ]
 
-const initialVotes: Record<string, number> = {
-  qadir: 46,
-  billo: 23,
-  phajja: 40,
-  insider: 31,
-  alive: 12,
-}
+const initialVotes: Record<string, number> = demoVoteCounts
 
 const initialComments: Comment[] = [
   {
-    id: 1,
+    id: 'demo-1',
+    userId: '',
     user: 'Sample comment',
     tag: 'qadir',
     text: 'Every time his mother looks at Baala, watch Qadir’s face. That boy is a loaded gun.',
@@ -83,7 +95,8 @@ const initialComments: Comment[] = [
     time: '2h ago',
   },
   {
-    id: 2,
+    id: 'demo-2',
+    userId: '',
     user: 'Sample comment',
     tag: 'phajja',
     text: 'Revenge always comes back in this story. Phajja’s son has the clearest reason of anyone.',
@@ -92,7 +105,8 @@ const initialComments: Comment[] = [
     time: '4h ago',
   },
   {
-    id: 3,
+    id: 'demo-3',
+    userId: '',
     user: 'Sample comment',
     tag: 'alive',
     text: 'Faiza Iftikhar would not kill the hero off in a promo. It’s a fake-out.',
@@ -110,26 +124,257 @@ const suspectLabels: Record<string, string> = {
   alive: 'nobody',
 }
 
+function formatRelativeTime(value: string) {
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60_000))
+  if (elapsedMinutes < 1) return 'just now'
+  if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60)
+  if (elapsedHours < 24) return `${elapsedHours}h ago`
+
+  const elapsedDays = Math.floor(elapsedHours / 24)
+  return `${elapsedDays}d ago`
+}
+
 function App() {
   const [votes, setVotes] = useState<Record<string, number>>(initialVotes)
   const [myVote, setMyVote] = useState<string | null>(null)
   const [filter, setFilter] = useState('all')
   const [draft, setDraft] = useState('')
   const [tag, setTag] = useState('qadir')
-  const [comments, setComments] = useState(initialComments)
+  const [comments, setComments] = useState<Comment[]>(isSupabaseConfigured ? [] : initialComments)
   const [isSubmittingVote, setIsSubmittingVote] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
   const [voteStatus, setVoteStatus] = useState<string | null>(null)
+  const [hasLiveCounts, setHasLiveCounts] = useState(false)
+  const [pollStatus, setPollStatus] = useState<PollStatus | null>(null)
+  const [pollStatusError, setPollStatusError] = useState<string | null>(null)
+  const [isLoadingPollStatus, setIsLoadingPollStatus] = useState(isSupabaseConfigured)
+  const [shareStatus, setShareStatus] = useState<string | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [isAuthLoading, setIsAuthLoading] = useState(isSupabaseConfigured)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [theoryError, setTheoryError] = useState<string | null>(null)
+  const [isPostingTheory, setIsPostingTheory] = useState(false)
+  const [likingTheoryId, setLikingTheoryId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!supabase) return
+
+    let isMounted = true
+    void supabase.auth.getSession().then(({ data, error }) => {
+      if (!isMounted) return
+      if (error) setAuthError(error.message)
+      setUser(data.session?.user ?? null)
+      setIsAuthLoading(false)
+    })
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setIsAuthLoading(false)
+      setAuthError(null)
+    })
+
+    return () => {
+      isMounted = false
+      authListener.subscription.unsubscribe()
+    }
+  }, [])
+
+  const refreshPollCounts = useCallback(async () => {
+    try {
+      const nextCounts = await fetchPollCounts()
+      setVotes({
+        qadir: nextCounts.qadir ?? 0,
+        billo: nextCounts.billo ?? 0,
+        phajja: nextCounts.phajja ?? 0,
+        insider: nextCounts.insider ?? 0,
+        alive: nextCounts.alive ?? 0,
+      })
+      setHasLiveCounts(isSupabaseConfigured)
+    } catch (error) {
+      setHasLiveCounts(false)
+      setVoteError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to load poll results right now.',
+      )
+    }
+  }, [])
+
+  const refreshPollStatus = useCallback(async () => {
+    if (!isSupabaseConfigured) return
+
+    try {
+      const nextStatus = await fetchPollStatus()
+      setPollStatus(nextStatus)
+      setMyVote(nextStatus?.my_vote ?? null)
+      setPollStatusError(
+        nextStatus ? null : 'The poll has not been created in Supabase yet.',
+      )
+    } catch (error) {
+      setPollStatusError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to load poll lock and reveal status.',
+      )
+    } finally {
+      setIsLoadingPollStatus(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const initialRefresh = window.setTimeout(() => {
+      void refreshPollCounts()
+      void refreshPollStatus()
+    }, 0)
+    const refreshInterval = window.setInterval(() => {
+      void refreshPollCounts()
+      void refreshPollStatus()
+    }, 10_000)
+
+    return () => {
+      window.clearTimeout(initialRefresh)
+      window.clearInterval(refreshInterval)
+    }
+  }, [refreshPollCounts, refreshPollStatus])
 
   const totalVotes = useMemo(
     () => Object.values(votes).reduce((sum, value) => sum + value, 0),
     [votes],
   )
+  const agreementPercent = myVote && hasLiveCounts && totalVotes > 0
+    ? Math.round(((votes[myVote] ?? 0) / totalVotes) * 100)
+    : null
+  const hasCalledIt = Boolean(
+    pollStatus?.is_locked &&
+      pollStatus.revealed_answer &&
+      myVote &&
+      pollStatus.revealed_answer === myVote,
+  )
+
+  const calledItStatus = !isSupabaseConfigured
+    ? 'Connect Supabase to verify the reveal and award the Called It badge.'
+    : pollStatusError
+      ? pollStatusError
+      : !pollStatus
+        ? 'Poll status is not available yet.'
+        : !pollStatus.is_locked
+          ? 'Your pick is saved. The Called It badge becomes available after voting locks and the answer is revealed.'
+          : !pollStatus.revealed_answer
+            ? 'The poll is locked. The reveal answer has not been added to Supabase yet.'
+            : hasCalledIt
+              ? 'You called it! Your saved pick matches the revealed answer.'
+              : myVote
+                ? `The reveal was ${suspectLabels[pollStatus.revealed_answer] ?? pollStatus.revealed_answer}. Your pick was different.`
+                : `The reveal was ${suspectLabels[pollStatus.revealed_answer] ?? pollStatus.revealed_answer}. No saved vote was found for this browser.`
+
+  const shareUrl = () => window.location.href.split('#')[0]
+  const shareMessage = () => {
+    if (!myVote) return 'Who Shot Baala? Cast your vote.'
+    const verdict = hasCalledIt ? 'I CALLED IT!' : `I think ${suspectLabels[myVote]} shot Baala.`
+    const agreement = agreementPercent === null
+      ? ''
+      : ` ${agreementPercent}% of fans agree (${totalVotes.toLocaleString()} votes).`
+    return `${verdict}${agreement} Vote in the fan poll: ${shareUrl()}`
+  }
+
+  const handleWhatsAppShare = () => {
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(shareMessage())}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
+  }
+
+  const handleXShare = () => {
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage())}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl())
+      setShareStatus('Poll link copied.')
+    } catch {
+      setShareStatus('Could not access the clipboard. Copy the page URL from your browser.')
+    }
+  }
+
+  const handleInstagramStory = async () => {
+    if (!myVote) return
+
+    try {
+      const file = await createVerdictStoryCard({
+        verdict: suspectLabels[myVote],
+        agreementPercent,
+        totalVotes,
+        calledIt: hasCalledIt,
+        shareUrl: shareUrl(),
+      })
+
+      if (
+        typeof navigator.share === 'function' &&
+        typeof navigator.canShare === 'function' &&
+        navigator.canShare({ files: [file] })
+      ) {
+        await navigator.share({
+          files: [file],
+          title: 'My Who Shot Baala verdict',
+          text: shareMessage(),
+        })
+        setShareStatus('Share card ready to post to your story.')
+        return
+      }
+
+      const fileUrl = URL.createObjectURL(file)
+      const downloadLink = document.createElement('a')
+      downloadLink.href = fileUrl
+      downloadLink.download = file.name
+      downloadLink.click()
+      window.setTimeout(() => URL.revokeObjectURL(fileUrl), 1000)
+      setShareStatus('Story card downloaded. Open Instagram and add it to your story.')
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return
+      setShareStatus(
+        error instanceof Error ? error.message : 'Could not create the story card.',
+      )
+    }
+  }
 
   const visibleComments = useMemo(() => {
     if (filter === 'all') return comments
     return comments.filter((comment) => comment.tag === filter)
   }, [comments, filter])
+
+  const refreshTheories = useCallback(async () => {
+    if (!isSupabaseConfigured) return
+
+    try {
+      const records = await fetchTheories(user?.id ?? null)
+      setComments(records.map((record: TheoryRecord) => ({
+        id: record.id,
+        userId: record.user_id,
+        user: record.user_id === user?.id ? 'You' : 'Fan',
+        tag: record.option_key,
+        text: record.body,
+        likes: record.likes,
+        liked: record.liked,
+        time: formatRelativeTime(record.created_at),
+      })))
+      setTheoryError(null)
+    } catch (error) {
+      setTheoryError(error instanceof Error ? error.message : 'Unable to load theories.')
+    }
+  }, [user])
+
+  useEffect(() => {
+    const initialLoad = window.setTimeout(() => void refreshTheories(), 0)
+    return () => window.clearTimeout(initialLoad)
+  }, [refreshTheories])
 
   const handleVote = async (id: string) => {
     if (myVote === id || isSubmittingVote) return
@@ -158,6 +403,9 @@ function App() {
           ? 'Vote saved to Supabase.'
           : 'Supabase is not configured yet; this vote is running in demo mode.',
       )
+
+      await refreshPollCounts()
+      await refreshPollStatus()
     } catch (error) {
       setVoteError(
         error instanceof Error
@@ -169,36 +417,59 @@ function App() {
     }
   }
 
-  const handleLike = (id: number) => {
-    setComments((current) =>
-      current.map((comment) =>
-        comment.id === id
-          ? {
-              ...comment,
-              liked: !comment.liked,
-              likes: comment.likes + (comment.liked ? -1 : 1),
-            }
-          : comment,
-      ),
-    )
+  const handleSignIn = async () => {
+    setAuthError(null)
+    try {
+      await signInWithGoogle()
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Unable to start Google sign-in.')
+    }
   }
 
-  const handlePostTheory = () => {
-    if (!draft.trim()) return
+  const handleSignOut = async () => {
+    setAuthError(null)
+    try {
+      await signOut()
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Unable to sign out.')
+    }
+  }
 
-    setComments((current) => [
-      {
-        id: Date.now(),
-        user: 'You',
-        tag,
-        text: draft.trim(),
-        likes: 0,
-        liked: false,
-        time: 'just now',
-      },
-      ...current,
-    ])
-    setDraft('')
+  const handleLike = async (id: string) => {
+    if (!user || likingTheoryId) return
+
+    setLikingTheoryId(id)
+    setTheoryError(null)
+    try {
+      const result = await toggleTheoryLike(id)
+      setComments((current) => current.map((comment) => comment.id === id
+        ? { ...comment, liked: result.liked, likes: Number(result.likes) }
+        : comment))
+    } catch (error) {
+      setTheoryError(error instanceof Error ? error.message : 'Unable to update this like.')
+    } finally {
+      setLikingTheoryId(null)
+    }
+  }
+
+  const handlePostTheory = async () => {
+    if (!user || isPostingTheory) return
+    if (!draft.trim()) {
+      setTheoryError('Write a theory before posting.')
+      return
+    }
+
+    setIsPostingTheory(true)
+    setTheoryError(null)
+    try {
+      await postTheory(user, tag, draft)
+      setDraft('')
+      await refreshTheories()
+    } catch (error) {
+      setTheoryError(error instanceof Error ? error.message : 'Unable to post your theory.')
+    } finally {
+      setIsPostingTheory(false)
+    }
   }
 
   return (
@@ -295,9 +566,11 @@ function App() {
                     type="button"
                     className="vote-button"
                     onClick={() => void handleVote(suspect.id)}
-                    disabled={isSubmittingVote}
+                    disabled={isSubmittingVote || Boolean(pollStatus?.is_locked)}
                   >
-                    {isSelected
+                    {pollStatus?.is_locked
+                      ? 'Poll locked'
+                      : isSelected
                       ? 'Your pick'
                       : myVote
                         ? isSubmittingVote
@@ -320,20 +593,72 @@ function App() {
               <p className="verdict">
                 {myVote ? (
                   <>
-                    I think <span>{suspectLabels[myVote]}</span> shot Baala.
+                    {hasCalledIt ? 'Called it: ' : 'I think '}
+                    <span>{suspectLabels[myVote]}</span> shot Baala.
                   </>
                 ) : (
                   'Select your suspect'
                 )}
               </p>
-              <p className="share-meta">Share it before the episode airs. If you are right, you get the “Called It” badge.</p>
+              <p className="share-meta">
+                {agreementPercent === null
+                  ? 'Live fan agreement will appear when Supabase results are connected.'
+                  : `${agreementPercent}% of fans agree · ${totalVotes.toLocaleString()} live votes`}
+              </p>
+
+              <div className="story-card-preview" aria-label="Live verdict story-card preview">
+                <span>{hasCalledIt ? 'Called It' : 'My verdict'}</span>
+                <strong>
+                  {myVote
+                    ? `${hasCalledIt ? 'I CALLED IT: ' : 'I THINK '}${suspectLabels[myVote].toUpperCase()} SHOT BAALA.`
+                    : 'YOUR VERDICT WILL APPEAR HERE'}
+                </strong>
+                <small>
+                  {agreementPercent === null
+                    ? 'Live vote agreement pending'
+                    : `${agreementPercent}% of fans agree · ${totalVotes.toLocaleString()} votes`}
+                </small>
+              </div>
+
+              <p className="called-it-status" role="status" aria-live="polite">
+                {isLoadingPollStatus ? 'Checking poll lock and reveal…' : calledItStatus}
+              </p>
             </div>
 
             <div className="share-actions">
-              <button type="button" className="social-btn whatsapp">WhatsApp</button>
-              <button type="button" className="social-btn instagram">Instagram story</button>
-              <button type="button" className="social-btn neutral">Post on X</button>
-              <button type="button" className="social-btn neutral">Copy link</button>
+              <button
+                type="button"
+                className="social-btn whatsapp"
+                onClick={handleWhatsAppShare}
+                disabled={!myVote}
+              >
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                className="social-btn instagram"
+                onClick={() => void handleInstagramStory()}
+                disabled={!myVote}
+              >
+                Instagram story
+              </button>
+              <button
+                type="button"
+                className="social-btn neutral"
+                onClick={handleXShare}
+                disabled={!myVote}
+              >
+                Post on X
+              </button>
+              <button
+                type="button"
+                className="social-btn neutral"
+                onClick={() => void handleCopyLink()}
+                disabled={!myVote}
+              >
+                Copy link
+              </button>
+              {shareStatus && <p className="share-status" role="status">{shareStatus}</p>}
             </div>
           </div>
         </section>
@@ -344,7 +669,46 @@ function App() {
             <p>Tag your suspect, make your case. Best-liked theory each week gets pinned.</p>
           </div>
 
-          <form className="theory-form" onSubmit={(event) => event.preventDefault()}>
+          <div className="theory-auth">
+            {user ? (
+              <>
+                <p>
+                  Signed in as{' '}
+                  <strong>
+                    {String(user.user_metadata.full_name ?? user.user_metadata.name ?? user.email ?? 'community member')}
+                  </strong>
+                </p>
+                <button type="button" className="auth-button" onClick={() => void handleSignOut()}>
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <p>Sign in is required to post a theory or agree with one.</p>
+                <button
+                  type="button"
+                  className="auth-button"
+                  onClick={() => void handleSignIn()}
+                  disabled={!isSupabaseConfigured || isAuthLoading}
+                >
+                  {isAuthLoading ? 'Checking sign-in…' : 'Continue with Google'}
+                </button>
+              </>
+            )}
+          </div>
+          {!isSupabaseConfigured && (
+            <p className="theory-notice">Configure Supabase to enable account sign-in and live theories.</p>
+          )}
+          {authError && <p className="theory-error" role="alert">{authError}</p>}
+          {theoryError && <p className="theory-error" role="alert">{theoryError}</p>}
+
+          <form
+            className="theory-form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void handlePostTheory()
+            }}
+          >
             <label htmlFor="theory">Your theory</label>
             <textarea
               id="theory"
@@ -352,12 +716,20 @@ function App() {
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder="Remember the scene where..."
+              maxLength={500}
+              disabled={!user || isPostingTheory}
             />
+            <span className="character-count">{draft.length}/500</span>
 
             <div className="form-row">
               <div className="select-wrap">
-                <label htmlFor="tag">I’m blaming</label>
-                <select id="tag" value={tag} onChange={(event) => setTag(event.target.value)}>
+                <label htmlFor="theory-tag">I’m blaming</label>
+                <select
+                  id="theory-tag"
+                  value={tag}
+                  onChange={(event) => setTag(event.target.value)}
+                  disabled={!user || isPostingTheory}
+                >
                   {suspects.map((suspect) => (
                     <option key={suspect.id} value={suspect.id}>
                       {suspect.shortLabel}
@@ -366,8 +738,8 @@ function App() {
                 </select>
               </div>
 
-              <button type="button" className="post-button" onClick={handlePostTheory}>
-                Post theory
+              <button type="submit" className="post-button" disabled={!user || isPostingTheory}>
+                {isPostingTheory ? 'Posting…' : 'Post theory'}
               </button>
             </div>
           </form>
@@ -416,10 +788,11 @@ function App() {
                     <div className="comment-actions">
                       <button
                         type="button"
-                        onClick={() => handleLike(comment.id)}
+                        onClick={() => void handleLike(comment.id)}
                         className={`agree-button ${comment.liked ? 'liked' : ''}`}
+                        disabled={!user || likingTheoryId !== null}
                       >
-                        Agree {comment.likes}
+                        {likingTheoryId === comment.id ? 'Saving…' : `Agree ${comment.likes}`}
                       </button>
                       <button type="button" className="reply-button">
                         Reply

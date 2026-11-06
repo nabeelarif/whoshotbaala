@@ -381,10 +381,59 @@
   color: var(--color-muted);
 }
 
+.story-card-preview {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  width: min(100%, 260px);
+  min-height: 390px;
+  margin-top: 12px;
+  padding: 22px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-bg);
+  aspect-ratio: 9 / 16;
+}
+
+.story-card-preview > span {
+  align-self: flex-start;
+  padding: 5px 10px;
+  border: 1px solid #5a4420;
+  border-radius: 999px;
+  background: #2a2014;
+  color: var(--color-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.story-card-preview strong {
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: clamp(24px, 6vw, 36px);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.story-card-preview small {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.called-it-status,
+.share-status {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
 .share-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  align-content: flex-start;
 }
 
 .social-btn {
@@ -410,6 +459,15 @@
   color: var(--color-text);
 }
 
+.social-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.share-status {
+  flex-basis: 100%;
+}
+
 .discussion-section {
   padding: 56px 0 72px;
 }
@@ -420,6 +478,58 @@
   gap: 6px;
   align-items: flex-start;
   margin-bottom: 24px;
+}
+
+.theory-auth {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px 18px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-panel);
+}
+
+.theory-auth p,
+.theory-notice,
+.theory-error {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.theory-auth strong {
+  color: var(--color-text);
+}
+
+.auth-button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #5a4420;
+  background: #2a2014;
+  color: var(--color-accent);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-button:disabled,
+.theory-form :disabled,
+.agree-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.theory-notice,
+.theory-error {
+  margin: 0 0 12px;
+}
+
+.theory-error {
+  color: #ffb4a8;
 }
 
 .theory-form {
@@ -447,6 +557,13 @@
   color: var(--color-text);
   font-size: 15px;
   padding: 12px;
+}
+
+.character-count {
+  align-self: flex-end;
+  margin-top: -8px;
+  color: var(--color-muted);
+  font-size: 12px;
 }
 
 .form-row {
