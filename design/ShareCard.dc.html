@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Verdict story card</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Inter:wght@400;600;700&amp;family=Noto+Nastaliq+Urdu:wght@600&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 405px; height: 720px; box-sizing: border-box; padding: 36px 30px; background: #17110D; color: #F3E9DC; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<span style="font-family: Anton, Impact, sans-serif; font-size: 18px; letter-spacing: 1px; text-transform: uppercase">Who Shot Baala?</span>
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#E8A930" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 1v5M12 18v5M1 12h5M18 12h5"></path></svg>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 18px">
+<span style="align-self: flex-start; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 6px 12px; border-radius: 999px; background: #2A2014; color: #E8A930; border: 1px solid #5A4420">My verdict</span>
+<p style="margin: 0; font-family: Anton, Impact, sans-serif; font-size: 30px; line-height: 1.05; text-transform: uppercase; color: #D9CBB9">I think</p>
+<p style="margin: 0; font-family: Anton, Impact, sans-serif; font-size: 88px; line-height: 0.92; text-transform: uppercase; color: #E8A930">Qadir</p>
+<p style="margin: 0; font-family: Anton, Impact, sans-serif; font-size: 30px; line-height: 1.05; text-transform: uppercase; color: #D9CBB9">shot Baala.</p>
+<p dir="rtl" lang="pa" style="margin: 0; font-family: 'Noto Nastaliq Urdu', serif; font-size: 22px; line-height: 2; color: #F3E9DC">تُسی کِنّوں دوشی سمجھدے او؟</p>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 12px; background: #221A14; border: 1px solid #3A2D22">
+<div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700"><span>[X]% of fans agree</span><span style="color: #BFAE9B">[N] votes</span></div>
+<div style="height: 8px; border-radius: 4px; background: #3A2D22; overflow: hidden"><div style="height: 8px; width: 40%; background: #E8A930; border-radius: 4px"></div></div>
+</div>
+<p style="margin: 0; font-size: 15px; font-weight: 600">Cast your vote before the reveal</p>
+<p style="margin: 0; font-size: 14px; color: #E8A930; font-weight: 700">[YOUR DOMAIN]</p>
+<p style="margin: 0; font-size: 11px; color: #BFAE9B">Fan poll · not affiliated with Green Entertainment</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":405,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

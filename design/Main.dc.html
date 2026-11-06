@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Who Shot Baala? Fan poll</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Inter:wght@400;500;600;700&amp;family=Noto+Nastaliq+Urdu:wght@600&amp;display=swap">
+<style>
+body{margin:0;background:#17110D}
+a{color:#E8A930}a:hover{color:#F6C766}
+textarea,select,button,input{font-family:Inter,system-ui,sans-serif}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #17110D; color: #F3E9DC; font-family: Inter, system-ui, sans-serif; font-size: 16px; line-height: 1.5">
+
+<header style="border-bottom: 1px solid #3A2D22">
+<div style="max-width: 1160px; margin: 0 auto; padding: 16px 24px; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 12px">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E8A930" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 1v5M12 18v5M1 12h5M18 12h5"></path></svg>
+<span style="font-family: Anton, Impact, sans-serif; font-size: 22px; letter-spacing: 1px; text-transform: uppercase">Who Shot Baala?</span>
+</div>
+<nav style="display: flex; flex-wrap: wrap; gap: 20px; font-size: 14px; font-weight: 600">
+<a href="#vote">Vote</a>
+<a href="#discuss">Theories</a>
+<a href="#share">Share</a>
+</nav>
+<span style="font-size: 13px; color: #BFAE9B">Fan poll · not affiliated with Green Entertainment</span>
+</div>
+</header>
+
+<section style="max-width: 1160px; margin: 0 auto; padding: 72px 24px 40px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<span style="font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: #3A1E17; color: #F4B4A6; border: 1px solid #6B2F23">Spoiler zone: based on the viral promo clip</span>
+<span style="font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: #2A2014; color: #E8A930; border: 1px solid #5A4420">Votes lock before the reveal episode</span>
+</div>
+<h1 style="margin: 0; font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: clamp(56px, 9vw, 120px); line-height: 0.95; text-transform: uppercase; letter-spacing: 1px">Who pulled<br>the trigger?</h1>
+<p dir="rtl" lang="pa" style="margin: 0; font-family: 'Noto Nastaliq Urdu', serif; font-size: 30px; line-height: 2; color: #E8A930">بالے نوں گولی کِنّے ماری؟</p>
+<p style="margin: 0; max-width: 640px; font-size: 19px; color: #D9CBB9">The promo shows a young gunman taking aim at Iqbal "Baala" Channan. Pick your suspect, defend your theory, and see if you called it when the truth airs.</p>
+</section>
+
+<section id="vote" style="max-width: 1160px; margin: 0 auto; padding: 24px 24px 56px; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px">
+<h2 style="margin: 0; font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: 36px; text-transform: uppercase; letter-spacing: 0.5px">The suspects</h2>
+<span style="font-size: 14px; color: #BFAE9B">{{totalLabel}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px">
+<sc-for list="{{suspects}}" as="s" hint-placeholder-count="5">
+<article style="display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 16px; background: {{s.bg}}; border: 2px solid {{s.border}}">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<span style="width: 56px; height: 56px; border-radius: 50%; background: #2E241B; border: 1px solid #5A4420; display: flex; align-items: center; justify-content: center; font-family: Anton, Impact, sans-serif; font-size: 26px; color: #E8A930">{{s.mono}}</span>
+<span style="font-size: 12px; font-weight: 700; color: #BFAE9B; letter-spacing: 1px">#{{s.num}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h3 style="margin: 0; font-size: 19px; font-weight: 700; line-height: 1.25">{{s.name}}</h3>
+<p style="margin: 0; font-size: 13px; font-weight: 600; color: #E8A930">{{s.role}}</p>
+</div>
+<p style="margin: 0; font-size: 14px; color: #D9CBB9; flex-grow: 1"><strong style="color: #F3E9DC">Motive:</strong> {{s.motive}}</p>
+<sc-if value="{{voted}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700"><span>{{s.pct}}%</span><span style="color: #BFAE9B">{{s.count}} votes</span></div>
+<div style="height: 8px; border-radius: 4px; background: #3A2D22; overflow: hidden"><div style="height: 8px; width: {{s.pct}}%; background: {{s.bar}}; border-radius: 4px"></div></div>
+</div>
+</sc-if>
+<button type="button" onClick="{{s.vote}}" style="min-height: 44px; border-radius: 10px; border: 1px solid {{s.btnBorder}}; background: {{s.btnBg}}; color: {{s.btnColor}}; font-size: 15px; font-weight: 700; cursor: pointer">{{s.btnLabel}}</button>
+</article>
+</sc-for>
+</div>
+</section>
+
+<section id="share" style="background: #221A14; border-top: 1px solid #3A2D22; border-bottom: 1px solid #3A2D22">
+<div style="max-width: 1160px; margin: 0 auto; padding: 40px 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+<div style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 380px">
+<span style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #E8A930; text-transform: uppercase">Your verdict</span>
+<p style="margin: 0; font-family: Anton, Impact, sans-serif; font-size: 34px; line-height: 1.1; text-transform: uppercase">{{verdict}}</p>
+<p style="margin: 0; font-size: 14px; color: #BFAE9B">Share it before the episode airs. If you're right, you get the "Called It" badge.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: none; background: #25D366; color: #0B2A16; font-weight: 700; font-size: 14px; cursor: pointer">WhatsApp</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: none; background: #E8A930; color: #17110D; font-weight: 700; font-size: 14px; cursor: pointer">Instagram story</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid #5A4420; background: transparent; color: #F3E9DC; font-weight: 700; font-size: 14px; cursor: pointer">Post on X</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid #5A4420; background: transparent; color: #F3E9DC; font-weight: 700; font-size: 14px; cursor: pointer">Copy link</button>
+</div>
+</div>
+</section>
+
+<section id="discuss" style="max-width: 1160px; margin: 0 auto; padding: 56px 24px 72px; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h2 style="margin: 0; font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: 36px; text-transform: uppercase; letter-spacing: 0.5px">Theory board</h2>
+<p style="margin: 0; font-size: 15px; color: #BFAE9B">Tag your suspect, make your case. Best-liked theory each week gets pinned.</p>
+</div>
+
+<form style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 16px; background: #221A14; border: 1px solid #3A2D22">
+<label for="theory" style="font-size: 14px; font-weight: 600">Your theory</label>
+<textarea id="theory" rows="3" value="{{draft}}" onChange="{{onDraft}}" placeholder="Remember the scene where..." style="resize: vertical; padding: 12px; border-radius: 10px; border: 1px solid #5A4420; background: #17110D; color: #F3E9DC; font-size: 15px"></textarea>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 10px">
+<label for="tag" style="font-size: 14px; color: #BFAE9B">I'm blaming</label>
+<select id="tag" value="{{tag}}" onChange="{{onTag}}" style="min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #5A4420; background: #17110D; color: #F3E9DC; font-size: 14px">
+<option value="qadir">Qadir</option>
+<option value="billo">Billo's eldest son</option>
+<option value="phajja">Phajja's son</option>
+<option value="insider">The insider</option>
+<option value="alive">Nobody — Baala lives</option>
+</select>
+</div>
+<button type="button" onClick="{{post}}" style="min-height: 44px; padding: 0 22px; border-radius: 10px; border: none; background: #E8A930; color: #17110D; font-weight: 700; font-size: 15px; cursor: pointer">Post theory</button>
+</div>
+</form>
+
+<div role="tablist" aria-label="Filter theories by suspect" style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="6">
+<button type="button" role="tab" aria-selected="{{f.on}}" onClick="{{f.pick}}" style="min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid {{f.border}}; background: {{f.bg}}; color: {{f.color}}; font-size: 14px; font-weight: 600; cursor: pointer">{{f.label}} · {{f.n}}</button>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<sc-for list="{{shown}}" as="c" hint-placeholder-count="3">
+<article style="display: flex; gap: 14px; padding: 18px; border-radius: 14px; background: #1E1712; border: 1px solid #3A2D22">
+<span aria-hidden="true" style="flex: none; width: 40px; height: 40px; border-radius: 50%; background: #2E241B; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #E8A930">{{c.initial}}</span>
+<div style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px">
+<strong style="font-size: 14px">{{c.user}}</strong>
+<span style="padding: 2px 10px; border-radius: 999px; background: #2A2014; color: #E8A930; border: 1px solid #5A4420; font-weight: 600">blames {{c.tagName}}</span>
+<span style="color: #BFAE9B">{{c.time}}</span>
+</div>
+<p style="margin: 0; font-size: 15px; color: #E9DDCD">{{c.text}}</p>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{c.like}}" aria-pressed="{{c.liked}}" style="min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #5A4420; background: {{c.likeBg}}; color: {{c.likeColor}}; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>Agree {{c.likes}}</button>
+<button type="button" style="min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #3A2D22; background: transparent; color: #BFAE9B; font-size: 13px; font-weight: 600; cursor: pointer">Reply</button>
+</div>
+</div>
+</article>
+</sc-for>
+<sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; padding: 24px; text-align: center; color: #BFAE9B; border: 1px dashed #3A2D22; border-radius: 14px">No theories for this suspect yet. Be the first.</p>
+</sc-if>
+</div>
+</section>
+
+<footer style="border-top: 1px solid #3A2D22">
+<div style="max-width: 1160px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; font-size: 13px; color: #BFAE9B">
+<span>A fan-made poll about the drama Mitti De Baway. Not affiliated with Green Entertainment or the show's makers.</span>
+<span>[YOUR DOMAIN]</span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":2400}}'>
+var SUSPECTS = [
+  { id: 'qadir', mono: 'Q', name: 'Qadir', role: "Qamar-un-Nissa's son", motive: "Baala is getting close to his mother, and he doesn't like it." },
+  { id: 'billo', mono: 'B', name: "Billo's eldest son", role: 'Heir to the feud', motive: 'Years of bad blood between the two families.' },
+  { id: 'phajja', mono: 'P', name: "Phajja's son", role: 'A son with a score', motive: 'Baala killed his father.' },
+  { id: 'insider', mono: 'I', name: 'The insider', role: 'Servant, munshi or guard', motive: 'Someone trusted, close enough to know every plan.' },
+  { id: 'alive', mono: '?', name: 'Nobody: Baala lives', role: 'Plot-twist camp', motive: '"Hero bhi kabhi marta hai?" The writer has hinted at more.' }
+];
+var NAMES = { qadir: 'Qadir', billo: "Billo's son", phajja: "Phajja's son", insider: 'the insider', alive: 'nobody' };
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      votes: { qadir: 0, billo: 0, phajja: 0, insider: 0, alive: 0 },
+      myVote: null,
+      filter: 'all',
+      draft: '',
+      tag: 'qadir',
+      comments: [
+        { id: 1, user: 'Sample comment', tag: 'qadir', text: 'Every time his mother looks at Baala, watch Qadir’s face. That boy is a loaded gun.', likes: 0, liked: false, time: 'example' },
+        { id: 2, user: 'Sample comment', tag: 'phajja', text: 'Revenge always comes back in this story. Phajja’s son has the clearest reason of anyone.', likes: 0, liked: false, time: 'example' },
+        { id: 3, user: 'Sample comment', tag: 'alive', text: 'Faiza Iftikhar would not kill the hero off in a promo. It’s a fake-out.', likes: 0, liked: false, time: 'example' }
+      ]
+    };
+  }
+
+  vote(id) {
+    var v = Object.assign({}, this.state.votes);
+    if (this.state.myVote === id) return;
+    if (this.state.myVote) v[this.state.myVote] -= 1;
+    v[id] += 1;
+    this.setState({ votes: v, myVote: id, tag: id });
+  }
+
+  renderVals() {
+    var self = this;
+    var st = this.state;
+    var total = 0;
+    Object.keys(st.votes).forEach(function (k) { total += st.votes[k]; });
+    var voted = !!st.myVote;
+
+    var suspects = SUSPECTS.map(function (s, i) {
+      var mine = st.myVote === s.id;
+      var count = st.votes[s.id];
+      return Object.assign({}, s, {
+        num: i + 1,
+        count: count,
+        pct: total ? Math.round(count / total * 100) : 0,
+        bg: mine ? '#2A2014' : '#1E1712',
+        border: mine ? '#E8A930' : '#3A2D22',
+        bar: mine ? '#E8A930' : '#8C7A66',
+        btnBg: mine ? '#E8A930' : 'transparent',
+        btnColor: mine ? '#17110D' : '#F3E9DC',
+        btnBorder: mine ? '#E8A930' : '#5A4420',
+        btnLabel: mine ? 'Your pick' : (voted ? 'Switch vote' : 'Vote'),
+        vote: function () { self.vote(s.id); }
+      });
+    });
+
+    var counts = { all: st.comments.length };
+    st.comments.forEach(function (c) { counts[c.tag] = (counts[c.tag] || 0) + 1; });
+    var filters = [{ id: 'all', label: 'All' }].concat(SUSPECTS.map(function (s) { return { id: s.id, label: s.id === 'alive' ? 'Baala lives' : s.name }; })).map(function (f) {
+      var on = st.filter === f.id;
+      return Object.assign({}, f, {
+        on: on,
+        n: counts[f.id] || 0,
+        bg: on ? '#E8A930' : 'transparent',
+        color: on ? '#17110D' : '#F3E9DC',
+        border: on ? '#E8A930' : '#5A4420',
+        pick: function () { self.setState({ filter: f.id }); }
+      });
+    });
+
+    var shown = st.comments
+      .filter(function (c) { return st.filter === 'all' || c.tag === st.filter; })
+      .map(function (c) {
+        return Object.assign({}, c, {
+          initial: c.user.charAt(0).toUpperCase(),
+          tagName: NAMES[c.tag],
+          likeBg: c.liked ? '#E8A930' : 'transparent',
+          likeColor: c.liked ? '#17110D' : '#F3E9DC',
+          like: function () {
+            self.setState({ comments: self.state.comments.map(function (x) {
+              return x.id === c.id ? Object.assign({}, x, { liked: !x.liked, likes: x.likes + (x.liked ? -1 : 1) }) : x;
+            }) });
+          }
+        });
+      });
+
+    return {
+      suspects: suspects,
+      voted: voted,
+      totalLabel: voted ? (total + (total === 1 ? ' vote so far' : ' votes so far')) : 'Vote to see the results',
+      verdict: voted ? (st.myVote === 'alive' ? 'I say Baala survives. Who do you blame?' : 'I think ' + NAMES[st.myVote] + ' shot Baala. Who do you blame?') : 'Pick a suspect to get your shareable verdict',
+      filters: filters,
+      shown: shown,
+      empty: shown.length === 0,
+      draft: st.draft,
+      tag: st.tag,
+      onDraft: function (e) { self.setState({ draft: e.target.value }); },
+      onTag: function (e) { self.setState({ tag: e.target.value }); },
+      post: function () {
+        var t = self.state.draft.trim();
+        if (!t) return;
+        self.setState({
+          draft: '',
+          filter: 'all',
+          comments: [{ id: Date.now(), user: 'You', tag: self.state.tag, text: t, likes: 0, liked: false, time: 'just now' }].concat(self.state.comments)
+        });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
